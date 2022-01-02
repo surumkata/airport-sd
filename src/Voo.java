@@ -3,20 +3,20 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 public class Voo {
-    private String id;
+    private int id;
     private String origem;
     private String destino;
     private int capacidade;
 
 
-    public Voo(String id,String origem,String destino,int capacidade){
+    public Voo(int id,String origem,String destino,int capacidade){
         this.id = id;
         this.origem = origem;
         this.destino = destino;
         this.capacidade = capacidade;
     }
 
-    public String getId() {
+    public int getId() {
         return id;
     }
 
@@ -33,14 +33,14 @@ public class Voo {
     }
 
     public void serialize(DataOutputStream out) throws IOException {
-        out.writeUTF(this.id);
+        out.writeInt(this.id);
         out.writeUTF(this.origem);
         out.writeUTF(this.destino);
         out.writeInt(this.capacidade);
     }
 
     public static Voo deserialize(DataInputStream in) throws IOException {
-        String id = in.readUTF();
+        int id = in.readInt();
         String origem = in.readUTF();
         String destino = in.readUTF();
         int capacidade = in.readInt();

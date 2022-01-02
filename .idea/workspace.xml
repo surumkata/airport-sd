@@ -2,8 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="2fa06b62-c16a-49ae-8c57-6c968198a03d" name="Changes" comment="começo da magia de verdade">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Handler.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Handler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Server.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Server.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Voo.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Voo.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/VoosManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/VoosManager.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Cliente.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Cliente.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Server.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Voo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Voo.java" afterDir="false" />
@@ -22,6 +26,14 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitSEFilterConfiguration">
+    <file-type-list>
+      <filtered-out-file-type name="LOCAL_BRANCH" />
+      <filtered-out-file-type name="REMOTE_BRANCH" />
+      <filtered-out-file-type name="TAG" />
+      <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
+    </file-type-list>
   </component>
   <component name="ProjectId" id="239D3rmM0as5AKHytL6o08YnETh" />
   <component name="ProjectViewState">

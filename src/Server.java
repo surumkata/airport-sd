@@ -11,8 +11,9 @@ import java.util.concurrent.locks.ReentrantLock;
 class VoosManager {
     private HashMap<String,Utilizador> utilizadores;
     private HashMap<String,Reserva> reservas;
-    private HashMap<String,Voo> voos;
+    private HashMap<Integer,Voo> voos;
     private ReentrantLock lock;
+    private int lastid;
 
     public VoosManager() {
         lock = new ReentrantLock();
@@ -20,10 +21,11 @@ class VoosManager {
         reservas = new HashMap<>();
         voos = new HashMap<>();
         //pre população
-        updateVoos(new Voo("1","Porto","Lisboa",150));
-        updateVoos(new Voo("2","Madrid","Lisboa",150));
-        updateVoos(new Voo("3","Lisboa","Tokyo",150));
-        updateVoos(new Voo("4","Barcelona","Paris",150));
+        int lastid = 0;
+        updateVoos(new Voo(1,"Porto","Lisboa",150));
+        updateVoos(new Voo(2,"Madrid","Lisboa",150));
+        updateVoos(new Voo(3,"Lisboa","Tokyo",150));
+        updateVoos(new Voo(4,"Barcelona","Paris",150));
     }
 
     public void updateUtilizadores(Utilizador u) {
@@ -37,8 +39,10 @@ class VoosManager {
         reservas.put(r.getCodigo(),r);
         lock.unlock();
     }
+    //TODO: verificar antes de put se ja existe esse id
     public void updateVoos(Voo v){
         lock.lock();
+        if(v.getId() > this.lastid) this.lastid = v.getId();
         voos.put(v.getId(),v);
         lock.unlock();
     }
@@ -53,6 +57,10 @@ class VoosManager {
         finally {
             lock.unlock();
         }
+    }
+
+    public int getLastid() {
+        return lastid;
     }
 }
 
@@ -79,18 +87,62 @@ class Handler implements Runnable {
             try{
                 boolean finish = false;
                 while(!finish) {
-                    String teste = dis.readUTF();
-                    System.out.println(teste);
-                    if (teste.equals("voos")) {
-                        VoosList voos = manager.getVoos();
-                        voos.serialize(dos);
-                    } else if (teste.equals("bye")) {
-                        finish = true;
+                    String command = dis.readUTF();
+                    System.out.println("comando recebido: "+command);
+                    switch (command){
+                        case "voos" ->{
+                            VoosList voos = manager.getVoos();
+                            voos.serialize(dos);
+                        }
+                        case "registo" ->{}
+                        case "login" ->{}
+                        case "addvoo" ->{ //TODO: apenas admin pode
+                            boolean validoOD = true;
+                            boolean validoC = true;
+                            String origem = dis.readUTF();
+                            String destino = dis.readUTF();
+                            String Scapacidade = dis.readUTF();
+                            StringBuilder sb;
+                            sb = new StringBuilder();
+                            if(origem.equals(destino)){
+                                validoOD = false;
+                            }
+                            try{
+                                int capacidade = Integer.parseInt(Scapacidade);
+                                int id = manager.getLastid()+1;
+                                if(capacidade < 100 || capacidade > 250){
+                                    validoC = false;
+                                }
+                                if(validoC && validoOD) {
+                                    manager.updateVoos(new Voo(id, origem, destino, capacidade));
+                                    sb.append("O voo ").append(origem).append(" -> ").append(destino).append(" com a capacidade de ").append(capacidade).append(" passageiros, foi registado com o id: ").append(id).append(".");
+                                }
+                                else if(!validoC){
+                                    sb.append("Erro ao registar voo: ").append(capacidade).append(" não é uma capacidade válida, experimente [100-250]");
+                                }
+                                else
+                                    sb.append("Erro ao registar voo: Origem e destino inválidos");
+                            }
+                            catch (NumberFormatException e){
+                                sb.append("Erro ao registar voo: ").append(Scapacidade).append(" não é uma capacidade válida");
+                            }
+                            finally {
+                                dos.writeUTF(sb.toString());
+                                dos.flush();
+                            }
+                        }
+                        case "encerra" ->{}
+                        case "reserva" ->{}
+                        case "cancela" ->{}
+                        case "quit" -> {
+                            finish = true;
+                            dis.close();
+                            dos.close();
+                            socket.close();
+                        }
+                        default -> {}
                     }
                 }
-                dis.close();
-                dos.close();
-                socket.close();
             }
             catch(IOException e){
                 e.printStackTrace();

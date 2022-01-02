@@ -15,8 +15,10 @@ public class Cliente {
                 System.out.println(voos);
                 return false;
             }
-            else if(tokens[0].equals("bye")){
-                dos.writeUTF("bye");
+            else if(tokens[0].equals("quit")){
+                dos.writeUTF("quit");
+                dis.close();
+                dos.close();
                 return true;
             }
         }else if(tokens.length==2){
@@ -34,8 +36,16 @@ public class Cliente {
                 //todo: reserva cidades(separadas ;) = token[1] datas(separadas ;) = token[2]
             }
         }else if(tokens.length==4 && tokens[0].equals("addvoo")){
-            //todo: adiciona voo origem = token[1] destino = token[2] capacidade = token[3]
+            dos.writeUTF("addvoo");
+            dos.writeUTF(tokens[1]);
+            dos.writeUTF(tokens[2]);
+            dos.writeUTF(tokens[3]);
+            dos.flush();
+            System.out.println(dis.readUTF());
+            return false;
         }
+
+        System.out.println("Comando inexistente!");
         return false;
 
     }
@@ -49,19 +59,16 @@ public class Cliente {
 
         String userInput;
         boolean finish = false;
-            while ((userInput = in.readLine()) != null && !finish) {
+            while ((!finish && (userInput = in.readLine()) != null)) {
                 try {
                     finish = parser(userInput,dis,dos);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
-        System.out.println("Bye Bye!");
-
-        dis.close();
-        dos.close();
-
         socket.close();
-        System.out.println("Bye Bye!");
+
+
+        System.out.println("Goodbye!");
     }
 }
