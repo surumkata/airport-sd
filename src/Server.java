@@ -1,3 +1,4 @@
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -58,24 +59,42 @@ class VoosManager {
 class Handler implements Runnable {
     private Socket socket;
     private VoosManager manager;
+    private DataInputStream dis;
+    private DataOutputStream dos;
 
-    public Handler (Socket socket, VoosManager manager) {
+    public Handler (Socket socket, VoosManager manager){
         this.socket = socket;
         this.manager = manager;
-    }
-
-    // @TODO
-    @Override
-    public void run() {
-        VoosList voos = manager.getVoos();
-        try {
-            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-            voos.serialize(dos);
-            dos.flush();
-            dos.close();
-        } catch (IOException e) {
+        try{
+            this.dis = new DataInputStream(socket.getInputStream());
+            this.dos = new DataOutputStream(socket.getOutputStream());
+        }
+        catch(IOException e){
             e.printStackTrace();
         }
+    }
+
+
+    public void run() {
+            try{
+                boolean finish = false;
+                while(!finish) {
+                    String teste = dis.readUTF();
+                    System.out.println(teste);
+                    if (teste.equals("voos")) {
+                        VoosList voos = manager.getVoos();
+                        voos.serialize(dos);
+                    } else if (teste.equals("bye")) {
+                        finish = true;
+                    }
+                }
+                dis.close();
+                dos.close();
+                socket.close();
+            }
+            catch(IOException e){
+                e.printStackTrace();
+            }
     }
 }
 

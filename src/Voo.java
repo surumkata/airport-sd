@@ -38,6 +38,7 @@ public class Voo {
         out.writeUTF(this.destino);
         out.writeInt(this.capacidade);
     }
+
     public static Voo deserialize(DataInputStream in) throws IOException {
         String id = in.readUTF();
         String origem = in.readUTF();

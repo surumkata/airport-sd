@@ -1,18 +1,24 @@
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.nio.charset.StandardCharsets;
 
 public class Cliente {
 
-    private void parser(String userInput){
+    private static boolean parser(String userInput,DataInputStream dis, DataOutputStream dos) throws IOException {
         String[] tokens = userInput.split(" ");
 
-        if(tokens.length==1 && tokens[0].equals("voos")){
-            //todo: lista de voos origem->destino
+        if(tokens.length==1){
+            if(tokens[0].equals("voos")) {
+                dos.writeUTF("voos");
+                dos.flush();
+                VoosList voos = VoosList.deserialize(dis);
+                System.out.println(voos);
+                return false;
+            }
+            else if(tokens[0].equals("bye")){
+                dos.writeUTF("bye");
+                return true;
+            }
         }else if(tokens.length==2){
             if(tokens[0].equals("encerra")){
                 //todo: encerra dia token[1](admin)
@@ -30,16 +36,32 @@ public class Cliente {
         }else if(tokens.length==4 && tokens[0].equals("addvoo")){
             //todo: adiciona voo origem = token[1] destino = token[2] capacidade = token[3]
         }
+        return false;
 
     }
 
     public static void main (String[] args) throws IOException {
-        Socket socket = new Socket("localhost", 12345);
 
+        Socket socket = new Socket("localhost", 12345);
+        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         DataInputStream dis = new DataInputStream(socket.getInputStream());
-        VoosList voos = VoosList.deserialize(dis);
+        DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+
+        String userInput;
+        boolean finish = false;
+            while ((userInput = in.readLine()) != null && !finish) {
+                try {
+                    finish = parser(userInput,dis,dos);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        System.out.println("Bye Bye!");
+
         dis.close();
+        dos.close();
+
         socket.close();
-        System.out.println(voos.toString());
+        System.out.println("Bye Bye!");
     }
 }
