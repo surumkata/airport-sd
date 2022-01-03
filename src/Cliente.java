@@ -33,9 +33,19 @@ public class Cliente {
             }
         }else if(tokens.length==3){
             if(tokens[0].equals("login")){
-                //todo: login name = token[1] pass = token[2]
+                dos.writeUTF("login");
+                dos.writeUTF(tokens[1]);
+                dos.writeUTF(tokens[2]);
+                dos.flush();
+                System.out.println(dis.readUTF());
+                return false;
             }else if(tokens[0].equals("registo")){
-                //todo: registo name = token[1] pass = token[2]
+                dos.writeUTF("registo");
+                dos.writeUTF(tokens[1]);
+                dos.writeUTF(tokens[2]);
+                dos.flush();
+                System.out.println(dis.readUTF());
+                return false;
             }else if(tokens[0].equals("reserva")){
                 //todo: reserva cidades(separadas ;) = token[1] datas(separadas ;) = token[2]
                 dos.writeUTF("reserva");

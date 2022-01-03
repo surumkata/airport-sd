@@ -3,6 +3,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,13 +22,22 @@ class VoosManager {
         utilizadores = new HashMap<>();
         reservas = new HashMap<>();
         voos = new HashMap<>();
-        //pre população
         this.lastidVoo = 0;
         this.lastidReserva = 0;
+        //pre população
+        //voos
         updateVoos(new Voo(1,"Porto","Lisboa",150));
         updateVoos(new Voo(2,"Madrid","Lisboa",150));
         updateVoos(new Voo(3,"Lisboa","Tokyo",150));
         updateVoos(new Voo(4,"Barcelona","Paris",150));
+        //users
+        updateUtilizadores(new Utilizador("admin","admin",true));
+        updateUtilizadores(new Utilizador("pessoa","pessoa",false));
+        //reservas
+        List<Integer> viagem = new ArrayList();
+        viagem.add(1);
+        LocalDateTime data = LocalDateTime.of(2022,1,3,0,0,0);
+        updateReservas(new Reserva(1,viagem,data,"pessoa"));
     }
 
     public void updateUtilizadores(Utilizador u) {
@@ -64,6 +74,10 @@ class VoosManager {
         return -1;
     }
 
+    public boolean existeUtilizador(String name){
+        return this.utilizadores.containsKey(name);
+    }
+
     public VoosList getVoos () {
         try{
             lock.lock();
@@ -82,6 +96,13 @@ class VoosManager {
     public int getLastidReserva(){
         return lastidReserva;
     }
+
+    public Utilizador getUtilizador(String nome, String password) {
+        Utilizador u = utilizadores.get(nome);
+        if(u != null && u.getPassword().equals(password))
+            return u;
+        return null;
+    }
 }
 
 class Handler implements Runnable {
@@ -89,6 +110,7 @@ class Handler implements Runnable {
     private VoosManager manager;
     private DataInputStream dis;
     private DataOutputStream dos;
+    private Utilizador logged = null;
 
     public Handler (Socket socket, VoosManager manager){
         this.socket = socket;
@@ -111,72 +133,142 @@ class Handler implements Runnable {
                     System.out.println("comando recebido: "+command);
                     switch (command){
                         case "voos" ->{
-                            VoosList voos = manager.getVoos();
-                            voos.serialize(dos);
+                            if(logged != null) {
+                                VoosList voos = manager.getVoos();
+                                voos.serialize(dos);
+                            }
+                            else{
+                                VoosList voos = new VoosList();
+                                voos.serialize(dos);
+                            }
                         }
-                        case "registo" ->{}
-                        case "login" ->{}
-                        case "addvoo" ->{ //TODO: apenas admin pode
-                            boolean validoOD = true;
-                            boolean validoC = true;
-                            String origem = dis.readUTF();
-                            String destino = dis.readUTF();
-                            String Scapacidade = dis.readUTF();
+                        case "registo" ->{
                             StringBuilder sb;
                             sb = new StringBuilder();
-                            if(origem.equals(destino)){
-                                validoOD = false;
-                            }
-                            try{
-                                int capacidade = Integer.parseInt(Scapacidade);
-                                int id = manager.getLastidVoo()+1;
-                                if(capacidade < 100 || capacidade > 250){
-                                    validoC = false;
+                            if(logged == null){
+                                String nome = dis.readUTF();
+                                String password = dis.readUTF();
+                                if(manager.existeUtilizador(nome)){
+                                    sb.append("Erro: Nome de utilizador já existe no sistema!");
                                 }
-                                if(validoC && validoOD) {
-                                    manager.updateVoos(new Voo(id, origem, destino, capacidade));
-                                    sb.append("O voo ").append(origem).append(" -> ").append(destino).append(" com a capacidade de ").append(capacidade).append(" passageiros, foi registado com o id: ").append(id).append(".");
+                                else {
+                                    manager.updateUtilizadores(new Utilizador(nome,password,false));
+                                    sb.append("Utilizador registado com o nome ").append(nome).append(".");
                                 }
-                                else if(!validoC){
-                                    sb.append("Erro ao registar voo: ").append(capacidade).append(" não é uma capacidade válida, experimente [100-250]");
-                                }
-                                else
-                                    sb.append("Erro ao registar voo: Origem e destino inválidos");
                             }
-                            catch (NumberFormatException e){
-                                sb.append("Erro ao registar voo: ").append(Scapacidade).append(" não é uma capacidade válida");
+                            else{
+                                sb.append("Você ja se encontra logado!");
                             }
-                            finally {
-                                dos.writeUTF(sb.toString());
-                                dos.flush();
-                            }
+                            dos.writeUTF(sb.toString());
                         }
-                        case "encerra" ->{}
-                        case "reserva" ->{
-                            String[] viagem = dis.readUTF().split(";");
-                            String[] datas = dis.readUTF().split(";");
-                            boolean valido = true;
-                            List<Integer> idsVoos = new ArrayList<>();
-                            if(viagem.length>=2){
-                                for(int i = 0;i< viagem.length-1 && valido;i++){
-                                    int id;
-                                    if((id = manager.existsVoo(viagem[i],viagem[i+1]))!=-1 ){
-                                        idsVoos.add(id);
-                                    }else {
-                                        valido = false;
+                        case "registoA" ->{
+                            StringBuilder sb;
+                            sb = new StringBuilder();
+                            if(logged == null && logged.isAdmin()){
+                                String nome = dis.readUTF();
+                                String password = dis.readUTF();
+                                if(manager.existeUtilizador(nome)){
+                                    sb.append("Erro: Nome de utilizador já existe no sistema!");
+                                }
+                                else {
+                                    manager.updateUtilizadores(new Utilizador(nome,password,true));
+                                    sb.append("Utilizador registado com o nome ").append(nome).append(".");
+                                }
+                            }
+                            else{
+                                sb.append("Você não tem permissoes de admin");
+                            }
+                            dos.writeUTF(sb.toString());
+                        }
+                        case "login" ->{
+                            StringBuilder sb;
+                            sb = new StringBuilder();
+                            if(logged == null){
+                                String nome = dis.readUTF();
+                                String password = dis.readUTF();
+                                if(manager.existeUtilizador(nome)){
+                                    logged = manager.getUtilizador(nome,password);
+                                    if(logged != null){
+                                        sb.append("Logado com sucesso!");
+                                    }
+                                    else{
+                                        sb.append("Erro: Password incorreta!");
                                     }
                                 }
-                                //todo: Ver a data e como o sistem escolhe dadas as datas possiveis
-                                manager.updateReservas(new Reserva(manager.getLastidReserva(),idsVoos, ));
+                                else {
+                                    sb.append("Erro: Utilizador não existe no sistema, experimente registar primeiro!");
+                                }
+                            }
+                            else{
+                                sb.append("Vocé ja se encontra logado!");
+                            }
+                            dos.writeUTF(sb.toString());
+                        }
+                        case "addvoo" ->{ //TODO: apenas admin pode
+                            if(logged != null && logged.isAdmin()) {
+                                boolean validoOD = true;
+                                boolean validoC = true;
+                                String origem = dis.readUTF();
+                                String destino = dis.readUTF();
+                                String Scapacidade = dis.readUTF();
+                                StringBuilder sb;
+                                sb = new StringBuilder();
+                                if (origem.equals(destino)) {
+                                    validoOD = false;
+                                }
+                                try {
+                                    int capacidade = Integer.parseInt(Scapacidade);
+                                    int id = manager.getLastidVoo() + 1;
+                                    if (capacidade < 100 || capacidade > 250) {
+                                        validoC = false;
+                                    }
+                                    if (validoC && validoOD) {
+                                        manager.updateVoos(new Voo(id, origem, destino, capacidade));
+                                        sb.append("O voo ").append(origem).append(" -> ").append(destino).append(" com a capacidade de ").append(capacidade).append(" passageiros, foi registado com o id: ").append(id).append(".");
+                                    } else if (!validoC) {
+                                        sb.append("Erro ao registar voo: ").append(capacidade).append(" não é uma capacidade válida, experimente [100-250]");
+                                    } else
+                                        sb.append("Erro ao registar voo: Origem e destino inválidos");
+                                } catch (NumberFormatException e) {
+                                    sb.append("Erro ao registar voo: ").append(Scapacidade).append(" não é uma capacidade válida");
+                                } finally {
+                                    dos.writeUTF(sb.toString());
+                                    dos.flush();
+                                }
+                            }
+                        }
+                        case "encerra" ->{
+                            if(logged != null && logged.isAdmin()) {
 
                             }
+                        }
+                        case "reserva" ->{
+                            if(logged != null) {
+                                String[] viagem = dis.readUTF().split(";");
+                                String[] datas = dis.readUTF().split(";");
+                                boolean valido = true;
+                                List<Integer> idsVoos = new ArrayList<>();
+                                if (viagem.length >= 2) {
+                                    for (int i = 0; i < viagem.length - 1 && valido; i++) {
+                                        int id;
+                                        if ((id = manager.existsVoo(viagem[i], viagem[i + 1])) != -1) {
+                                            idsVoos.add(id);
+                                        } else {
+                                            valido = false;
+                                        }
+                                    }
+                                    //todo: Ver a data e como o sistem escolhe dadas as datas possiveis
+                                    //manager.updateReservas(new Reserva(manager.getLastidReserva(),idsVoos, ));
 
-
+                                }
+                            }
                         }
                         case "cancela" ->{
-                            String codReserva = dis.readUTF();
-                            manager.removeReserva(codReserva);
-                            dos.writeUTF("Reserva "+codReserva+" cancelada");
+                            if(logged != null) {
+                                String codReserva = dis.readUTF();
+                                manager.removeReserva(codReserva);
+                                dos.writeUTF("Reserva " + codReserva + " cancelada");
+                            }
 
                         }
                         case "quit" -> {
