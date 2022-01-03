@@ -14,8 +14,13 @@ public class Cliente {
                 VoosList voos = VoosList.deserialize(dis);
                 System.out.println(voos);
                 return false;
-            }
-            else if(tokens[0].equals("quit")){
+
+            }else if(tokens[0].equals("reservas")){
+                dos.writeUTF("reservas");
+                //todo: o cliente poder ver as suas reservas
+                //como estará previamente logado aqui é enviado o nome do mesmo
+                dos.flush();
+            } else if(tokens[0].equals("quit")){
                 dos.writeUTF("quit");
                 dis.close();
                 dos.close();
@@ -39,8 +44,8 @@ public class Cliente {
             }else if(tokens[0].equals("reserva")){
                 //todo: reserva cidades(separadas ;) = token[1] datas(separadas ;) = token[2]
                 dos.writeUTF("reserva");
+                dos.writeUTF(tokens[1]);
                 dos.writeUTF(tokens[2]);
-                dos.writeUTF(tokens[3]);
                 dos.flush();
             }
         }else if(tokens.length==4 && tokens[0].equals("addvoo")){

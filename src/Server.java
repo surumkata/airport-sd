@@ -3,6 +3,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +41,7 @@ class VoosManager {
         lock.lock();
         if(r.getCodigo() > this.lastidReserva) this.lastidReserva = r.getCodigo();
         reservas.put(r.getCodigo(),r);
+        System.out.println(r.getCodigo());
         lock.unlock();
     }
     public void removeReserva(String codReserva){
@@ -114,6 +116,9 @@ class Handler implements Runnable {
                             VoosList voos = manager.getVoos();
                             voos.serialize(dos);
                         }
+                        case "reservas" ->{
+
+                        }
                         case "registo" ->{}
                         case "login" ->{}
                         case "addvoo" ->{ //TODO: apenas admin pode
@@ -157,6 +162,7 @@ class Handler implements Runnable {
                             String[] datas = dis.readUTF().split(";");
                             boolean valido = true;
                             List<Integer> idsVoos = new ArrayList<>();
+                            List<LocalDate> datasVoos = new ArrayList<>();
                             if(viagem.length>=2){
                                 for(int i = 0;i< viagem.length-1 && valido;i++){
                                     int id;
@@ -165,9 +171,13 @@ class Handler implements Runnable {
                                     }else {
                                         valido = false;
                                     }
+
+                                    for(String d : datas){
+                                        datasVoos.add(LocalDate.parse(d));
+                                    }
                                 }
-                                //todo: Ver a data e como o sistem escolhe dadas as datas possiveis
-                                manager.updateReservas(new Reserva(manager.getLastidReserva(),idsVoos, ));
+                                //sistema está a escolher a primeira data do intervalo
+                                manager.updateReservas(new Reserva(manager.getLastidReserva(),idsVoos,datasVoos.get(0)));
 
                             }
 

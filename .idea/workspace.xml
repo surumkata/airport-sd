@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="2fa06b62-c16a-49ae-8c57-6c968198a03d" name="Changes" comment="inicio parser cliente input">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="2fa06b62-c16a-49ae-8c57-6c968198a03d" name="Changes" comment="inicio reserva">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Handler.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Handler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Reserva.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Reserva.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Server.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Server.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Utilizador.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Utilizador.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Voo.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Voo.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/VoosList.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/VoosList.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/VoosManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/VoosManager.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Cliente.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Cliente.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Reserva.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Reserva.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Server.java" afterDir="false" />
@@ -85,7 +92,14 @@
       <option name="project" value="LOCAL" />
       <updated>1641146315531</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="inicio reserva">
+      <created>1641229954789</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1641229954789</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -102,6 +116,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="começo da magia de verdade" />
-    <option name="LAST_COMMIT_MESSAGE" value="começo da magia de verdade" />
+    <MESSAGE value="inicio reserva" />
+    <option name="LAST_COMMIT_MESSAGE" value="inicio reserva" />
   </component>
 </project>

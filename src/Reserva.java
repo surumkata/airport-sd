@@ -1,4 +1,4 @@
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -6,9 +6,9 @@ public class Reserva {
     private String utilizador;
     private int codigo;
     private List<Integer> viagem; //lista de ids de voos
-    private LocalDateTime data;
+    private LocalDate data;
 
-    public Reserva(int codigo,List<Integer> viagem,LocalDateTime data){
+    public Reserva(int codigo,List<Integer> viagem,LocalDate data){
         this.codigo = codigo;
         this.viagem = new ArrayList<>(viagem);
         this.data = data;
@@ -18,7 +18,7 @@ public class Reserva {
         return codigo;
     }
 
-    public LocalDateTime getData() {
+    public LocalDate getData() {
         return data;
     }
 }
