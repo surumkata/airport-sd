@@ -25,6 +25,10 @@ public class Cliente {
             if(tokens[0].equals("encerra")){
                 //todo: encerra dia token[1](admin)
             }else if(tokens[0].equals("cancela")){
+                dos.writeUTF("cancela");
+                dos.writeUTF(tokens[1]);
+                dos.flush();
+                System.out.println(dis.readUTF());
                 //todo: cancela reserva codReserva = token[1] (utilizador)
             }
         }else if(tokens.length==3){
@@ -34,6 +38,10 @@ public class Cliente {
                 //todo: registo name = token[1] pass = token[2]
             }else if(tokens[0].equals("reserva")){
                 //todo: reserva cidades(separadas ;) = token[1] datas(separadas ;) = token[2]
+                dos.writeUTF("reserva");
+                dos.writeUTF(tokens[2]);
+                dos.writeUTF(tokens[3]);
+                dos.flush();
             }
         }else if(tokens.length==4 && tokens[0].equals("addvoo")){
             dos.writeUTF("addvoo");

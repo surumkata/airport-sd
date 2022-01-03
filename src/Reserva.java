@@ -4,17 +4,17 @@ import java.util.List;
 
 public class Reserva {
     private String utilizador;
-    private String codigo;
-    private List<String> viagem; //lista de ids de voos
+    private int codigo;
+    private List<Integer> viagem; //lista de ids de voos
     private LocalDateTime data;
 
-    public Reserva(String codigo,List<String> viagem,LocalDateTime data){
+    public Reserva(int codigo,List<Integer> viagem,LocalDateTime data){
         this.codigo = codigo;
         this.viagem = new ArrayList<>(viagem);
         this.data = data;
     }
 
-    public String getCodigo() {
+    public int getCodigo() {
         return codigo;
     }
 

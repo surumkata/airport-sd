@@ -1,19 +1,20 @@
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 class VoosManager {
     private HashMap<String,Utilizador> utilizadores;
-    private HashMap<String,Reserva> reservas;
+    private HashMap<Integer,Reserva> reservas;
     private HashMap<Integer,Voo> voos;
     private ReentrantLock lock;
-    private int lastid;
+    private int lastidVoo;
+    private int lastidReserva;
 
     public VoosManager() {
         lock = new ReentrantLock();
@@ -21,7 +22,8 @@ class VoosManager {
         reservas = new HashMap<>();
         voos = new HashMap<>();
         //pre população
-        int lastid = 0;
+        this.lastidVoo = 0;
+        this.lastidReserva = 0;
         updateVoos(new Voo(1,"Porto","Lisboa",150));
         updateVoos(new Voo(2,"Madrid","Lisboa",150));
         updateVoos(new Voo(3,"Lisboa","Tokyo",150));
@@ -36,15 +38,30 @@ class VoosManager {
 
     public void updateReservas(Reserva r){
         lock.lock();
+        if(r.getCodigo() > this.lastidReserva) this.lastidReserva = r.getCodigo();
         reservas.put(r.getCodigo(),r);
+        lock.unlock();
+    }
+    public void removeReserva(String codReserva){
+        lock.lock();
+        reservas.remove(codReserva);
         lock.unlock();
     }
     //TODO: verificar antes de put se ja existe esse id
     public void updateVoos(Voo v){
         lock.lock();
-        if(v.getId() > this.lastid) this.lastid = v.getId();
+        if(v.getId() > this.lastidVoo) this.lastidVoo = v.getId();
         voos.put(v.getId(),v);
         lock.unlock();
+    }
+    public int existsVoo(String origem,String destino){
+        for(Voo v : voos.values()){
+            if(v.getOrigem().equals(origem) && v.getDestino().equals(destino)){
+                return v.getId();
+            }
+
+        }
+        return -1;
     }
 
     public VoosList getVoos () {
@@ -59,8 +76,11 @@ class VoosManager {
         }
     }
 
-    public int getLastid() {
-        return lastid;
+    public int getLastidVoo() {
+        return lastidVoo;
+    }
+    public int getLastidReserva(){
+        return lastidReserva;
     }
 }
 
@@ -109,7 +129,7 @@ class Handler implements Runnable {
                             }
                             try{
                                 int capacidade = Integer.parseInt(Scapacidade);
-                                int id = manager.getLastid()+1;
+                                int id = manager.getLastidVoo()+1;
                                 if(capacidade < 100 || capacidade > 250){
                                     validoC = false;
                                 }
@@ -132,8 +152,33 @@ class Handler implements Runnable {
                             }
                         }
                         case "encerra" ->{}
-                        case "reserva" ->{}
-                        case "cancela" ->{}
+                        case "reserva" ->{
+                            String[] viagem = dis.readUTF().split(";");
+                            String[] datas = dis.readUTF().split(";");
+                            boolean valido = true;
+                            List<Integer> idsVoos = new ArrayList<>();
+                            if(viagem.length>=2){
+                                for(int i = 0;i< viagem.length-1 && valido;i++){
+                                    int id;
+                                    if((id = manager.existsVoo(viagem[i],viagem[i+1]))!=-1 ){
+                                        idsVoos.add(id);
+                                    }else {
+                                        valido = false;
+                                    }
+                                }
+                                //todo: Ver a data e como o sistem escolhe dadas as datas possiveis
+                                manager.updateReservas(new Reserva(manager.getLastidReserva(),idsVoos, ));
+
+                            }
+
+
+                        }
+                        case "cancela" ->{
+                            String codReserva = dis.readUTF();
+                            manager.removeReserva(codReserva);
+                            dos.writeUTF("Reserva "+codReserva+" cancelada");
+
+                        }
                         case "quit" -> {
                             finish = true;
                             dis.close();
