@@ -5,11 +5,8 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Handler.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Handler.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Reserva.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Reserva.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Server.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Server.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/VoosManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/VoosManager.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Cliente.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Cliente.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Reserva.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Reserva.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Server.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -43,13 +40,13 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../aula8" />
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.0" />
     <property name="project.structure.side.proportion" value="0.0" />
   </component>
-  <component name="RunManager" selected="Application.Cliente">
-    <configuration name="Cliente" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Application.Server">
+    <configuration name="Cliente" type="Application" factoryName="Application" singleton="false" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="Cliente" />
       <module name="ProjetoSD" />
       <method v="2">

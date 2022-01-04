@@ -1,10 +1,9 @@
 import java.io.*;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 
 public class Cliente {
 
-    private static boolean parser(String userInput,DataInputStream dis, DataOutputStream dos) throws IOException {
+    private static boolean parser(String userInput, DataInputStream dis, DataOutputStream dos, boolean logged) throws IOException {
         String[] tokens = userInput.split(" ");
 
         if(tokens.length==1){
@@ -20,6 +19,16 @@ public class Cliente {
                 //todo: o cliente poder ver as suas reservas
                 //como estará previamente logado aqui é enviado o nome do mesmo
                 dos.flush();
+                return false;
+            }else if(tokens[0].equals("logout")){
+                dos.writeUTF("logout");
+                dos.flush();
+                System.out.println(dis.readUTF());
+                return false;
+            }else if(tokens[0].equals("help")){
+                System.out.println("Lista de comandos:");
+                //todo escrever comandos possiveis
+                return false;
             } else if(tokens[0].equals("quit")){
                 dos.writeUTF("quit");
                 dis.close();
@@ -43,11 +52,18 @@ public class Cliente {
                 dos.writeUTF(tokens[2]);
                 dos.flush();
 
-                Boolean logado = dis.readBoolean();
+                logged = dis.readBoolean();
                 System.out.println(dis.readUTF());
                 return false;
             }else if(tokens[0].equals("registo")){
                 dos.writeUTF("registo");
+                dos.writeUTF(tokens[1]);
+                dos.writeUTF(tokens[2]);
+                dos.flush();
+                System.out.println(dis.readUTF());
+                return false;
+            }else if(tokens[0].equals("registoA")){
+                dos.writeUTF("registoA");
                 dos.writeUTF(tokens[1]);
                 dos.writeUTF(tokens[2]);
                 dos.flush();
@@ -81,12 +97,13 @@ public class Cliente {
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         DataInputStream dis = new DataInputStream(socket.getInputStream());
         DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+        boolean logged = false;
 
         String userInput;
         boolean finish = false;
             while ((!finish && (userInput = in.readLine()) != null)) {
                 try {
-                    finish = parser(userInput,dis,dos);
+                    finish = parser(userInput,dis,dos,logged);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

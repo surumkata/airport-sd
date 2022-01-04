@@ -112,10 +112,13 @@ class Handler implements Runnable {
     private DataInputStream dis;
     private DataOutputStream dos;
     private Utilizador logged = null;
+    private int idC;
 
-    public Handler (Socket socket, VoosManager manager){
+    public Handler (Socket socket, VoosManager manager, int id){
+
         this.socket = socket;
         this.manager = manager;
+        this.idC = id;
         try{
             this.dis = new DataInputStream(socket.getInputStream());
             this.dos = new DataOutputStream(socket.getOutputStream());
@@ -131,7 +134,7 @@ class Handler implements Runnable {
                 boolean finish = false;
                 while(!finish) {
                     String command = dis.readUTF();
-                    System.out.println("comando recebido: "+command);
+                    System.out.println("comando recebido do cliente "+idC+": "+command);
                     switch (command){
                         case "voos" ->{
                             if(logged != null) {
@@ -165,7 +168,7 @@ class Handler implements Runnable {
                         case "registoA" ->{
                             StringBuilder sb;
                             sb = new StringBuilder();
-                            if(logged == null && logged.isAdmin()){
+                            if(logged != null && logged.isAdmin()){
                                 String nome = dis.readUTF();
                                 String password = dis.readUTF();
                                 if(manager.existeUtilizador(nome)){
@@ -173,7 +176,7 @@ class Handler implements Runnable {
                                 }
                                 else {
                                     manager.updateUtilizadores(new Utilizador(nome,password,true));
-                                    sb.append("Utilizador registado com o nome ").append(nome).append(".");
+                                    sb.append("Admin registado com o nome ").append(nome).append(".");
                                 }
                             }
                             else{
@@ -203,6 +206,7 @@ class Handler implements Runnable {
                             else{
                                 sb.append("Vocé ja se encontra logado!");
                             }
+                            dos.writeBoolean(logged!=null);
                             dos.writeUTF(sb.toString());
                         }
                         case "addvoo" ->{ //TODO: apenas admin pode
@@ -276,6 +280,14 @@ class Handler implements Runnable {
                             }
 
                         }
+                        case "logout" -> {
+                            if(logged != null) {
+                                logged = null;
+                                dos.writeUTF("Deslogado com sucesso!");
+                            }
+                            else dos.writeUTF("Você não se encontra logado!");
+                            dos.flush();
+                        }
                         case "quit" -> {
                             finish = true;
                             dis.close();
@@ -298,10 +310,12 @@ public class Server{
     public static void main (String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(12345);
         VoosManager manager = new VoosManager();
+        int i = 0;
 
         while (true) {
             Socket socket = serverSocket.accept();
-            Thread worker = new Thread(new Handler(socket, manager));
+            i++;
+            Thread worker = new Thread(new Handler(socket, manager,i));
             worker.start();
         }
     }
