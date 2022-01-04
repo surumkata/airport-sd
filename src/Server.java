@@ -1,6 +1,4 @@
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDate;
@@ -15,14 +13,16 @@ class VoosManager {
     private HashMap<Integer,Reserva> reservas;
     private HashMap<Integer,Voo> voos;
     private ReentrantLock lock;
+    private String utilizadoresCsv;
     private int lastidVoo;
     private int lastidReserva;
 
-    public VoosManager() {
+    public VoosManager(String utilizadoresCsv) {
         lock = new ReentrantLock();
         utilizadores = new HashMap<>();
         reservas = new HashMap<>();
         voos = new HashMap<>();
+        this.utilizadoresCsv = utilizadoresCsv;
         this.lastidVoo = 0;
         this.lastidReserva = 0;
         //pre população
@@ -32,8 +32,8 @@ class VoosManager {
         updateVoos(new Voo(3,"Lisboa","Tokyo",150));
         updateVoos(new Voo(4,"Barcelona","Paris",150));
         //users
-        updateUtilizadores(new Utilizador("admin","admin",true));
-        updateUtilizadores(new Utilizador("pessoa","pessoa",false));
+        updateUtilizadores(new Utilizador("admin","admin",1));
+        updateUtilizadores(new Utilizador("pessoa","pessoa",0));
         //reservas
         List<Integer> viagem = new ArrayList();
         viagem.add(1);
@@ -104,6 +104,24 @@ class VoosManager {
             return u;
         return null;
     }
+
+    public void registoUtilizadorCsv(String nome,String password ,int adminPermission) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.utilizadoresCsv,true));
+        bw.write("\n");
+        bw.write(nome+";"+password+";"+adminPermission);
+        bw.close();
+    }
+
+    public void loadUtilizadoresCsv() throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(this.utilizadoresCsv));
+        String line;
+        while ((line = br.readLine()) != null){
+            String[] parsed = line.split(";");
+            updateUtilizadores(new Utilizador(parsed[0],parsed[1],Integer.parseInt(parsed[2])));
+        }
+        br.close();
+
+    }
 }
 
 class Handler implements Runnable {
@@ -112,13 +130,10 @@ class Handler implements Runnable {
     private DataInputStream dis;
     private DataOutputStream dos;
     private Utilizador logged = null;
-    private int idC;
 
-    public Handler (Socket socket, VoosManager manager, int id){
-
+    public Handler (Socket socket, VoosManager manager){
         this.socket = socket;
         this.manager = manager;
-        this.idC = id;
         try{
             this.dis = new DataInputStream(socket.getInputStream());
             this.dos = new DataOutputStream(socket.getOutputStream());
@@ -134,7 +149,7 @@ class Handler implements Runnable {
                 boolean finish = false;
                 while(!finish) {
                     String command = dis.readUTF();
-                    System.out.println("comando recebido do cliente "+idC+": "+command);
+                    System.out.println("comando recebido: "+command);
                     switch (command){
                         case "voos" ->{
                             if(logged != null) {
@@ -156,7 +171,8 @@ class Handler implements Runnable {
                                     sb.append("Erro: Nome de utilizador já existe no sistema!");
                                 }
                                 else {
-                                    manager.updateUtilizadores(new Utilizador(nome,password,false));
+                                    manager.updateUtilizadores(new Utilizador(nome,password,0));
+                                    manager.registoUtilizadorCsv(nome,password,0);
                                     sb.append("Utilizador registado com o nome ").append(nome).append(".");
                                 }
                             }
@@ -168,15 +184,16 @@ class Handler implements Runnable {
                         case "registoA" ->{
                             StringBuilder sb;
                             sb = new StringBuilder();
-                            if(logged != null && logged.isAdmin()){
+                            if(logged == null && logged.isAdmin()){
                                 String nome = dis.readUTF();
                                 String password = dis.readUTF();
                                 if(manager.existeUtilizador(nome)){
                                     sb.append("Erro: Nome de utilizador já existe no sistema!");
                                 }
                                 else {
-                                    manager.updateUtilizadores(new Utilizador(nome,password,true));
-                                    sb.append("Admin registado com o nome ").append(nome).append(".");
+                                    manager.updateUtilizadores(new Utilizador(nome,password,1));
+                                    manager.registoUtilizadorCsv(nome,password,0);
+                                    sb.append("Utilizador registado com o nome ").append(nome).append(".");
                                 }
                             }
                             else{
@@ -192,21 +209,17 @@ class Handler implements Runnable {
                                 String password = dis.readUTF();
                                 if(manager.existeUtilizador(nome)){
                                     logged = manager.getUtilizador(nome,password);
-                                    if(logged != null){
+                                    if(logged != null && password.equals(logged.getPassword())){
                                         sb.append("Logado com sucesso!");
-                                    }
-                                    else{
+                                    }else{
                                         sb.append("Erro: Password incorreta!");
                                     }
-                                }
-                                else {
+                                }else {
                                     sb.append("Erro: Utilizador não existe no sistema, experimente registar primeiro!");
                                 }
-                            }
-                            else{
+                            }else{
                                 sb.append("Vocé ja se encontra logado!");
                             }
-                            dos.writeBoolean(logged!=null);
                             dos.writeUTF(sb.toString());
                         }
                         case "addvoo" ->{ //TODO: apenas admin pode
@@ -280,14 +293,6 @@ class Handler implements Runnable {
                             }
 
                         }
-                        case "logout" -> {
-                            if(logged != null) {
-                                logged = null;
-                                dos.writeUTF("Deslogado com sucesso!");
-                            }
-                            else dos.writeUTF("Você não se encontra logado!");
-                            dos.flush();
-                        }
                         case "quit" -> {
                             finish = true;
                             dis.close();
@@ -309,14 +314,13 @@ public class Server{
 
     public static void main (String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(12345);
-        VoosManager manager = new VoosManager();
-        int i = 0;
+        VoosManager manager = new VoosManager("../ProjetoSD/cp/registos.csv");//os ficheiros de persistencia são passados na criação do manager
+        manager.loadUtilizadoresCsv();
 
         while (true) {
             Socket socket = serverSocket.accept();
-            i++;
-            Thread worker = new Thread(new Handler(socket, manager,i));
-            worker.start();
+            Thread handler = new Thread(new Handler(socket, manager));
+            handler.start();
         }
     }
 
