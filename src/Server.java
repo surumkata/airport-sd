@@ -3,6 +3,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,7 +37,7 @@ class VoosManager {
         //reservas
         List<Integer> viagem = new ArrayList();
         viagem.add(1);
-        LocalDateTime data = LocalDateTime.of(2022,1,3,0,0,0);
+        LocalDate data = LocalDate.of(2022,1,3);
         updateReservas(new Reserva(1,viagem,data,"pessoa"));
     }
 
@@ -248,6 +249,7 @@ class Handler implements Runnable {
                                 String[] datas = dis.readUTF().split(";");
                                 boolean valido = true;
                                 List<Integer> idsVoos = new ArrayList<>();
+                                List<LocalDate> datasVoos = new ArrayList<>();
                                 if (viagem.length >= 2) {
                                     for (int i = 0; i < viagem.length - 1 && valido; i++) {
                                         int id;
@@ -256,10 +258,13 @@ class Handler implements Runnable {
                                         } else {
                                             valido = false;
                                         }
-                                    }
-                                    //todo: Ver a data e como o sistem escolhe dadas as datas possiveis
-                                    //manager.updateReservas(new Reserva(manager.getLastidReserva(),idsVoos, ));
 
+                                        for(String d : datas){
+                                            datasVoos.add(LocalDate.parse(d));
+                                        }
+                                    }
+                                    //neste momento está a escolher a primeira data possivel
+                                    manager.updateReservas(new Reserva(manager.getLastidReserva(),idsVoos,datasVoos.get(0),logged.getNome()));
                                 }
                             }
                         }
