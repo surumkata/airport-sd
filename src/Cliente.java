@@ -43,7 +43,6 @@ public class Cliente {
                 dos.writeUTF(tokens[2]);
                 dos.flush();
 
-                Boolean logado = dis.readBoolean();
                 System.out.println(dis.readUTF());
                 return false;
             }else if(tokens[0].equals("registo")){

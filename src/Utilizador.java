@@ -1,9 +1,9 @@
 public class Utilizador {
     private String nome;
     private String password;
-    private boolean adminPermission;
+    private int adminPermission;
 
-    public Utilizador(String nome,String password,boolean adminPermission){
+    public Utilizador(String nome,String password,int adminPermission){
         this.nome = nome;
         this.password = password;
         this.adminPermission = adminPermission;
@@ -17,9 +17,12 @@ public class Utilizador {
         return password;
     }
 
-    public boolean isAdmin() {
-        return adminPermission;
-    }
 
+    public boolean isAdmin() {
+        if (this.adminPermission == 1)
+            return true;
+        else return false;
+
+    }
 
 }
