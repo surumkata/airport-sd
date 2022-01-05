@@ -1,94 +1,254 @@
 import java.io.*;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 
 public class Cliente {
 
-    private static boolean parser(String userInput,DataInputStream dis, DataOutputStream dos) throws IOException {
-        String[] tokens = userInput.split(" ");
+    public static class Sender{
+        private DataOutputStream dos;
 
-        if(tokens.length==1){
-            if(tokens[0].equals("voos")) {
-                dos.writeUTF("voos");
+        //quit -> 0
+        //registo -> 1 + (naoadmin 0,admin 1)
+        //login -> 2
+        //logout -> 3
+        //voos -> 4
+        //reservas -> 5
+        //reserva -> 6
+        //cancela -> 7
+        //encerra -> 8
+        //addvoo -> 9
+
+        public Sender(DataOutputStream dos){
+            this.dos = dos;
+        }
+
+        public void sendVoos(){
+            try{
+                this.dos.writeInt(4); //voos
+                this.dos.flush();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+
+        public void sendLogin(String nome, String password){
+            try{
+                this.dos.writeInt(2); //login
+                this.dos.writeUTF(nome);
+                this.dos.writeUTF(password);
+                this.dos.flush();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+
+        public void sendLogout(){
+            try{
+                this.dos.writeInt(3); //logout
+                this.dos.flush();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+
+        public void sendRegisto(String nome, String password, boolean admin) {
+            try{
+                this.dos.writeInt(1); //registo
+                if(admin) this.dos.writeInt(1); //admin
+                else this.dos.writeInt(0); //naoadmin
+                this.dos.writeUTF(nome);
+                this.dos.writeUTF(password);
+                this.dos.flush();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+
+        public void sendCancela(String numRegisto) {
+            try{
+                this.dos.writeInt(7); //cancela
+                dos.writeUTF(numRegisto);
                 dos.flush();
-                VoosList voos = VoosList.deserialize(dis);
-                System.out.println(voos);
-                return false;
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
 
-            }else if(tokens[0].equals("reservas")){
-                dos.writeUTF("reservas");
+        public void sendReservas() {
+            try{
+                this.dos.writeInt(5); //reservas
                 //todo: o cliente poder ver as suas reservas
                 //como estará previamente logado aqui é enviado o nome do mesmo
                 dos.flush();
-                return false;
-            }else if(tokens[0].equals("logout")){
-                dos.writeUTF("logout");
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+
+        public void sendQuit() {
+            try {
+                this.dos.writeInt(0); //quit
                 dos.flush();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+
+        public void sendReserva(String viagem, String datas) {
+            try{
+                //todo: reserva cidades(separadas ;) = token[1] datas(separadas ;) = token[2]
+                this.dos.writeInt(6); //reserva
+                dos.writeUTF(viagem);
+                dos.writeUTF(datas);
+                dos.flush();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+
+        public void sendAddVoo(String origem, String destino, String capacidade) {
+            try{
+                this.dos.writeInt(9); //advoo
+                dos.writeUTF(origem);
+                dos.writeUTF(destino);
+                dos.writeUTF(capacidade);
+                dos.flush();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+
+        public void sendEncerra(String dia) {
+            //todo: encerra dia (admin)
+            try{
+                this.dos.writeInt(8);
+                this.dos.flush();
+                dos.flush();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static class Receiver{
+        private DataInputStream dis;
+
+        public Receiver(DataInputStream dis){
+            this.dis = dis;
+        }
+
+        public void receiveVoos(){
+            try{
+                VoosList voos = VoosList.deserialize(dis);
+                System.out.println(voos);
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+
+        public void receiveMessage(){
+            try{
                 System.out.println(dis.readUTF());
-                return false;
-            }else if(tokens[0].equals("help")){
-                System.out.println("Lista de comandos:");
-                //todo escrever comandos possiveis
-                return false;
-            } else if(tokens[0].equals("quit")){
-                dos.writeUTF("quit");
-                dis.close();
-                dos.close();
-                return true;
+            }
+            catch(IOException e){
+                e.printStackTrace();
+            }
+        }
+
+        public boolean receiveLogin() {
+            boolean logged = false;
+            try{
+                logged = dis.readBoolean();
+                System.out.println(dis.readUTF());
+            }
+            catch(IOException e){
+                e.printStackTrace();
+            }
+            return logged;
+        }
+    }
+
+    private static boolean parser(String userInput,DataInputStream dis,DataOutputStream dos,boolean logged) throws IOException {
+        String[] tokens = userInput.split(" ");
+        Sender sender = new Sender(dos);
+        Receiver receiver = new Receiver(dis);
+        if(tokens.length==1){
+            switch (tokens[0]) {
+                case "voos" -> {
+                    sender.sendVoos();
+                    receiver.receiveVoos();
+                }
+                case "reservas" -> {
+                    sender.sendReservas();
+                    dos.flush();
+                }
+                case "logout" -> {
+                    sender.sendLogout();
+                    receiver.receiveMessage();
+                }
+                case "help" -> System.out.println(comandosDisponiveis());
+                case "quit" -> {
+                    sender.sendQuit();
+                    return true;
+                }
             }
         }else if(tokens.length==2){
             if(tokens[0].equals("encerra")){
-                //todo: encerra dia token[1](admin)
+                sender.sendEncerra(tokens[1]);
             }else if(tokens[0].equals("cancela")){
-                dos.writeUTF("cancela");
-                dos.writeUTF(tokens[1]);
-                dos.flush();
+                sender.sendCancela(tokens[1]);
+
                 System.out.println(dis.readUTF());
                 //todo: cancela reserva codReserva = token[1] (utilizador)
             }
         }else if(tokens.length==3){
-            if(tokens[0].equals("login")){
-                dos.writeUTF("login");
-                dos.writeUTF(tokens[1]);
-                dos.writeUTF(tokens[2]);
-                dos.flush();
-
-                System.out.println(dis.readUTF());
-                return false;
-            }else if(tokens[0].equals("registo")){
-                dos.writeUTF("registo");
-                dos.writeUTF(tokens[1]);
-                dos.writeUTF(tokens[2]);
-                dos.flush();
-                System.out.println(dis.readUTF());
-                return false;
-            }else if(tokens[0].equals("registoA")){
-                dos.writeUTF("registoA");
-                dos.writeUTF(tokens[1]);
-                dos.writeUTF(tokens[2]);
-                dos.flush();
-                System.out.println(dis.readUTF());
-                return false;
-            }else if(tokens[0].equals("reserva")){
-                //todo: reserva cidades(separadas ;) = token[1] datas(separadas ;) = token[2]
-                dos.writeUTF("reserva");
-                dos.writeUTF(tokens[1]);
-                dos.writeUTF(tokens[2]);
-                dos.flush();
+            switch (tokens[0]) {
+                case "login" -> {
+                    sender.sendLogin(tokens[1], tokens[2]);
+                    logged = receiver.receiveLogin();
+                }
+                case "registo" -> {
+                    sender.sendRegisto(tokens[1], tokens[2], false);
+                    receiver.receiveMessage();
+                }
+                case "registoA" -> {
+                    sender.sendRegisto(tokens[1], tokens[2], true);
+                    receiver.receiveMessage();
+                }
+                case "reserva" -> {
+                    sender.sendReserva(tokens[1],tokens[2]);
+                    //falta receber confirmaçao
+                }
             }
         }else if(tokens.length==4 && tokens[0].equals("addvoo")){
-            dos.writeUTF("addvoo");
-            dos.writeUTF(tokens[1]);
-            dos.writeUTF(tokens[2]);
-            dos.writeUTF(tokens[3]);
-            dos.flush();
-            System.out.println(dis.readUTF());
-            return false;
+            sender.sendAddVoo(tokens[1],tokens[2],tokens[3]);
+            receiver.receiveMessage();
         }
+        else System.out.println("Comando inexistente!");
 
-        System.out.println("Comando inexistente!");
         return false;
 
+    }
+
+    public static String comandosDisponiveis(){
+        StringBuilder sb;
+        sb = new StringBuilder();
+        sb.append("Comandos Disponíveis\n");
+        sb.append("Registar -> registo nome password\n");
+        sb.append("Login -> login nome password\n");
+        sb.append("Logout -> logout\n");
+        //todo: meter todos
+        return sb.toString();
     }
 
     public static void main (String[] args) throws IOException {
@@ -97,16 +257,19 @@ public class Cliente {
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         DataInputStream dis = new DataInputStream(socket.getInputStream());
         DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+        boolean logged = false;
 
         String userInput;
         boolean finish = false;
             while ((!finish && (userInput = in.readLine()) != null)) {
                 try {
-                    finish = parser(userInput,dis,dos);
+                    finish = parser(userInput,dis,dos,logged);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
+        dis.close();
+        dos.close();
         socket.close();
 
 

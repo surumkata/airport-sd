@@ -7,6 +7,7 @@ public class Voo {
     private String origem;
     private String destino;
     private int capacidade;
+    private int lotacao;
 
 
     public Voo(int id,String origem,String destino,int capacidade){
@@ -14,6 +15,17 @@ public class Voo {
         this.origem = origem;
         this.destino = destino;
         this.capacidade = capacidade;
+        this.lotacao = 0;
+    }
+
+    public void addPassageiro(){
+        if(lotacao < capacidade){
+            lotacao++;
+        }
+    }
+
+    public int getLotacao() {
+        return lotacao;
     }
 
     public int getId() {
@@ -51,7 +63,7 @@ public class Voo {
     public String toString(){
         StringBuilder sb;
         sb = new StringBuilder();
-        sb.append(this.origem).append("->").append(this.destino);
+        sb.append(this.origem).append("->").append(this.destino).append(" ["+lotacao+"/"+capacidade+"]");
         return sb.toString();
     }
 /*

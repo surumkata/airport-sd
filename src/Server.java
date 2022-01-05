@@ -145,15 +145,26 @@ class Handler implements Runnable {
         }
     }
 
+    //quit -> 0
+    //registo -> 1 + (naoadmin 0,admin 1)
+    //login -> 2
+    //logout -> 3
+    //voos -> 4
+    //reservas -> 5
+    //reserva -> 6
+    //cancela -> 7
+    //encerra -> 8
+    //addvoo -> 9
+
 
     public void run() {
             try{
                 boolean finish = false;
                 while(!finish) {
-                    String command = dis.readUTF();
-                    System.out.println("comando recebido do cliente "+idC+": "+command);
-                    switch (command){
-                        case "voos" ->{
+                    int opcode = dis.readInt();
+                    System.out.println("opcode recebido do cliente "+idC+": "+opcode);
+                    switch (opcode){
+                        case 4 ->{
                             if(logged != null) {
                                 VoosList voos = manager.getVoos();
                                 voos.serialize(dos);
@@ -163,47 +174,46 @@ class Handler implements Runnable {
                                 voos.serialize(dos);
                             }
                         }
-                        case "registo" ->{
+                        case 1 ->{
                             StringBuilder sb;
                             sb = new StringBuilder();
-                            if(logged == null){
-                                String nome = dis.readUTF();
-                                String password = dis.readUTF();
-                                if(manager.existeUtilizador(nome)){
-                                    sb.append("Erro: Nome de utilizador já existe no sistema!");
+                            int code = dis.readInt();
+                            if(code == 1) {
+                                if (logged != null && logged.isAdmin()) {
+                                    String nome = dis.readUTF();
+                                    String password = dis.readUTF();
+                                    if (manager.existeUtilizador(nome)) {
+                                        sb.append("Erro: Nome de utilizador já existe no sistema!");
+                                    } else {
+                                        manager.updateUtilizadores(new Utilizador(nome, password, 1));
+                                        manager.registoUtilizadorCsv(nome, password, 0);
+                                        sb.append("Utilizador registado com o nome ").append(nome).append(".");
+                                    }
+                                } else {
+                                    sb.append("Você não tem permissoes de admin");
                                 }
-                                else {
-                                    manager.updateUtilizadores(new Utilizador(nome,password,0));
-                                    manager.registoUtilizadorCsv(nome,password,0);
-                                    sb.append("Utilizador registado com o nome ").append(nome).append(".");
+                            }
+                            else if (code == 0) {
+                                if (logged == null) {
+                                    String nome = dis.readUTF();
+                                    String password = dis.readUTF();
+                                    if (manager.existeUtilizador(nome)) {
+                                        sb.append("Erro: Nome de utilizador já existe no sistema!");
+                                    } else {
+                                        manager.updateUtilizadores(new Utilizador(nome, password, 0));
+                                        manager.registoUtilizadorCsv(nome, password, 0);
+                                        sb.append("Utilizador registado com o nome ").append(nome).append(".");
+                                    }
+                                } else {
+                                    sb.append("Você ja se encontra logado!");
                                 }
                             }
                             else{
-                                sb.append("Você ja se encontra logado!");
+                                sb.append("Erro");
                             }
                             dos.writeUTF(sb.toString());
                         }
-                        case "registoA" ->{
-                            StringBuilder sb;
-                            sb = new StringBuilder();
-                            if(logged != null && logged.isAdmin()){
-                                String nome = dis.readUTF();
-                                String password = dis.readUTF();
-                                if(manager.existeUtilizador(nome)){
-                                    sb.append("Erro: Nome de utilizador já existe no sistema!");
-                                }
-                                else {
-                                    manager.updateUtilizadores(new Utilizador(nome,password,1));
-                                    manager.registoUtilizadorCsv(nome,password,0);
-                                    sb.append("Utilizador registado com o nome ").append(nome).append(".");
-                                }
-                            }
-                            else{
-                                sb.append("Você não tem permissoes de admin");
-                            }
-                            dos.writeUTF(sb.toString());
-                        }
-                        case "login" ->{
+                        case 2 ->{
                             StringBuilder sb;
                             sb = new StringBuilder();
                             if(logged == null){
@@ -225,7 +235,7 @@ class Handler implements Runnable {
                             dos.writeBoolean(logged!=null);
                             dos.writeUTF(sb.toString());
                         }
-                        case "addvoo" ->{ //TODO: apenas admin pode
+                        case 9 ->{ //TODO: apenas admin pode
                             if(logged != null && logged.isAdmin()) {
                                 boolean validoOD = true;
                                 boolean validoC = true;
@@ -258,12 +268,12 @@ class Handler implements Runnable {
                                 }
                             }
                         }
-                        case "encerra" ->{
+                        case 8 ->{
                             if(logged != null && logged.isAdmin()) {
 
                             }
                         }
-                        case "reserva" ->{
+                        case 6 ->{
                             if(logged != null) {
                                 String[] viagem = dis.readUTF().split(";");
                                 String[] datas = dis.readUTF().split(";");
@@ -288,7 +298,7 @@ class Handler implements Runnable {
                                 }
                             }
                         }
-                        case "cancela" ->{
+                        case 7 ->{
                             if(logged != null) {
                                 String codReserva = dis.readUTF();
                                 manager.removeReserva(codReserva);
@@ -296,7 +306,7 @@ class Handler implements Runnable {
                             }
 
                         }
-                        case "logout" -> {
+                        case 3 -> {
                             if(logged != null) {
                                 logged = null;
                                 dos.writeUTF("Deslogado com sucesso!");
@@ -304,7 +314,7 @@ class Handler implements Runnable {
                             else dos.writeUTF("Você não se encontra logado!");
                             dos.flush();
                         }
-                        case "quit" -> {
+                        case 0 -> {
                             finish = true;
                             dis.close();
                             dos.close();
