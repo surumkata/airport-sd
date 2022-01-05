@@ -51,7 +51,7 @@ class VoosManager {
         if(r.getCodigo() > this.lastidReserva) this.lastidReserva = r.getCodigo();
         //adiciona reserva
         reservas.put(r.getCodigo(),r);
-        //adiciona lotação
+        //adiciona lotação NAO ESTA A ATUALIZAR
         for(int id : r.getViagem()){
             voos.get(id).addLotacao(1);
         }
@@ -94,6 +94,30 @@ class VoosManager {
         finally {
             lock.unlock();
         }
+    }
+
+    public ArrayList<String> getReservasVoos(String nome){
+        ArrayList<String> listaReservas = new ArrayList<>();
+        StringBuilder sb;
+        for(Reserva r : reservas.values()){
+            int i = 0;
+            sb = new StringBuilder();
+            sb.append("#CodigoReserva "+r.getCodigo()+" Viagem:");
+            for(int idVoo : r.getViagem() ){
+                Voo v = voos.get(idVoo);
+                if(i==0){
+                    sb.append(v.getOrigem());
+                    sb.append("->");
+                    sb.append(v.getDestino());
+                }else{
+                    sb.append("->");
+                    sb.append(v.getDestino());
+                }
+            }
+            sb.append("\n");
+            listaReservas.add(sb.toString());
+        }
+        return listaReservas;
     }
 
     public int getLastidVoo() {
@@ -251,7 +275,13 @@ class Handler implements Runnable {
         }
     }
 
-    public void reservas(){/*todo listar reservas do utilizador logado*/}
+    public void reservas() throws IOException {/*todo listar reservas do utilizador logado*/
+       ArrayList<String> rs = manager.getReservasVoos(user.getNome());
+       dos.writeInt(rs.size());
+       for(String s : rs){
+           dos.writeUTF(s);
+       }
+    }
 
     public void reserva() throws IOException {
         if(logged) {
@@ -260,6 +290,7 @@ class Handler implements Runnable {
             boolean valido = true;
             List<Integer> idsVoos = new ArrayList<>();
             List<LocalDate> datasVoos = new ArrayList<>();
+            //todo: falta verifica lotação
             if (viagem.length >= 2) {
                 for (int i = 0; i < viagem.length - 1 && valido; i++) {
                     int id;
@@ -274,7 +305,12 @@ class Handler implements Runnable {
                     }
                 }
                 //neste momento está a escolher a primeira data possivel
-                if(valido){manager.updateReservas(new Reserva(manager.getLastidReserva(),idsVoos,datasVoos.get(0),user.getNome()));}
+                if(valido){
+                    manager.updateReservas(new Reserva(manager.getLastidReserva(),idsVoos,datasVoos.get(0),user.getNome()));
+                    dos.writeUTF("Viagem reservada com sucesso.");
+                }else{
+                    dos.writeUTF("Não foi possivel concluir reserva");
+                }
             }
         }
     }

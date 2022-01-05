@@ -163,6 +163,13 @@ public class Cliente {
             }
         }
 
+        public void receiveReservas() throws IOException {
+            int size = dis.readInt();
+            for(int i=0;i<size;i++){
+                System.out.println(dis.readUTF());
+            }
+        }
+
         public void receiveMessage(){
             try{
                 System.out.println(dis.readUTF());
@@ -199,6 +206,7 @@ public class Cliente {
                 }
                 case "reservas" -> {
                     sender.sendReservas();
+                    receiver.receiveReservas();
                     dos.flush();
                 }
                 case "logout" -> {
@@ -237,7 +245,7 @@ public class Cliente {
                 }
                 case "reserva" -> {
                     sender.sendReserva(tokens[1],tokens[2]);
-                    //falta receber confirmaçao
+                    receiver.receiveMessage();
                 }
             }
         }else if(tokens.length==4 && tokens[0].equals("addvoo")){
