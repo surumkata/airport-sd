@@ -14,7 +14,9 @@ public class Reserva {
         this.data = data;
         this.utilizador = utilizador;
     }
-
+    public List<Integer> getViagem(){
+        return this.viagem;
+    }
     public int getCodigo() {
         return codigo;
     }

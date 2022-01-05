@@ -3,10 +3,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 public class Voo {
-    private int id;
-    private String origem;
-    private String destino;
-    private int capacidade;
+    private final int id;
+    private final String origem;
+    private final String destino;
+    private final int capacidade;
     private int lotacao;
 
 
@@ -42,6 +42,10 @@ public class Voo {
 
     public String getOrigem() {
         return origem;
+    }
+
+    public void addLotacao(int lotacao){
+        this.lotacao += lotacao;
     }
 
     public void serialize(DataOutputStream out) throws IOException {

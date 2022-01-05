@@ -1,7 +1,14 @@
 import java.io.*;
 import java.net.Socket;
+import java.sql.SQLOutput;
+import java.util.Objects;
 
 public class Cliente {
+    private static boolean logged;
+
+    public Cliente(){
+        logged = false;
+    }
 
     public static class Sender{
         private DataOutputStream dos;
@@ -168,8 +175,8 @@ public class Cliente {
         public boolean receiveLogin() {
             boolean logged = false;
             try{
-                logged = dis.readBoolean();
                 System.out.println(dis.readUTF());
+                logged = dis.readBoolean();
             }
             catch(IOException e){
                 e.printStackTrace();
@@ -178,11 +185,13 @@ public class Cliente {
         }
     }
 
-    private static boolean parser(String userInput,DataInputStream dis,DataOutputStream dos,boolean logged) throws IOException {
+    private  boolean parser(String userInput,DataInputStream dis,DataOutputStream dos) throws IOException {
         String[] tokens = userInput.split(" ");
         Sender sender = new Sender(dos);
         Receiver receiver = new Receiver(dis);
-        if(tokens.length==1){
+        if(!logged && !Objects.equals(tokens[0], "login") && !Objects.equals(tokens[0], "registo")&&!Objects.equals(tokens[0], "quit") ){
+            System.out.println("Ainda não se encontra loggado");
+        }else if(tokens.length==1){
             switch (tokens[0]) {
                 case "voos" -> {
                     sender.sendVoos();
@@ -194,6 +203,7 @@ public class Cliente {
                 }
                 case "logout" -> {
                     sender.sendLogout();
+                    logged = false;
                     receiver.receiveMessage();
                 }
                 case "help" -> System.out.println(comandosDisponiveis());
@@ -257,13 +267,13 @@ public class Cliente {
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         DataInputStream dis = new DataInputStream(socket.getInputStream());
         DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-        boolean logged = false;
+        Cliente client = new Cliente();
 
         String userInput;
         boolean finish = false;
             while ((!finish && (userInput = in.readLine()) != null)) {
                 try {
-                    finish = parser(userInput,dis,dos,logged);
+                    finish = client.parser(userInput,dis,dos);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
