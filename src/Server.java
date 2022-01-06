@@ -46,7 +46,7 @@ class VoosManager {
         lock.unlock();
     }
 
-    public void removeReserva(String codReserva){
+    public void removeReserva(int codReserva){
         lock.lock();
         reservas.remove(codReserva);
         lock.unlock();
@@ -72,6 +72,7 @@ class VoosManager {
     public boolean existeUtilizador(String name){
         return this.utilizadores.containsKey(name);
     }
+    public boolean existeReserva(int cod){ return this.reservas.containsKey(cod);  }
 
     public VoosList getVoos () {
         try{
@@ -114,6 +115,10 @@ class VoosManager {
     }
     public int getLastidReserva(){
         return lastidReserva;
+    }
+
+    public Reserva getReserva(int cod){
+        return reservas.get(cod);
     }
 
     public Utilizador getUtilizador(String nome) {
@@ -183,17 +188,6 @@ class Handler implements Runnable {
             e.printStackTrace();
         }
     }
-
-    //quit -> 0
-    //registo -> 1 + (naoadmin 0,admin 1)
-    //login -> 2
-    //logout -> 3
-    //voos -> 4
-    //reservas -> 5
-    //reserva -> 6
-    //cancela -> 7
-    //encerra -> 8
-    //addvoo -> 9
 
     public boolean quit() throws IOException {
         dis.close();
@@ -328,11 +322,23 @@ class Handler implements Runnable {
     }
 
     public void cancela() throws IOException {
-        if(logged) {
-            String codReserva = dis.readUTF();
-            //todo: verificar se o user loggado que fez a reserva
-            manager.removeReserva(codReserva);
-            dos.writeUTF("Reserva " + codReserva + " cancelada");
+         StringBuilder sb;
+         sb = new StringBuilder();
+         if(logged) {
+            int codReserva = dis.readInt();
+            if(manager.existeReserva(codReserva)){
+                Reserva r = manager.getReserva(codReserva);
+                if(r.getUtilizador().equals(user.getNome())){
+                      manager.removeReserva(codReserva);
+                }else{
+                    sb.append("Essa reserva não existe");
+                }
+
+            }else{
+                sb.append("Essa reserva não existe");
+             }
+            sb.append("Reserva ").append(codReserva).append(" cancelada");
+            dos.writeUTF(sb.toString());
         }
     }
 

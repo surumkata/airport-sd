@@ -77,7 +77,7 @@ public class Cliente {
         public void sendCancela(String numRegisto) {
             try{
                 this.dos.writeInt(7); //cancela
-                dos.writeUTF(numRegisto);
+                dos.writeInt(Integer.parseInt(numRegisto));
                 dos.flush();
             }
             catch (IOException e){

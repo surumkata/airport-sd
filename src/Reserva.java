@@ -20,7 +20,7 @@ public class Reserva {
     public int getCodigo() {
         return codigo;
     }
-
+    public String getUtilizador(){return utilizador;}
     public void setCodigo(int cod){this.codigo = cod;}
 
     public LocalDate getData() {
