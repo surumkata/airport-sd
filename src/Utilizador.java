@@ -19,10 +19,7 @@ public class Utilizador {
 
 
     public boolean isAdmin() {
-        if (this.adminPermission == 1)
-            return true;
-        else return false;
-
+        return this.adminPermission == 1;
     }
 
 }

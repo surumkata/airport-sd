@@ -13,31 +13,19 @@ class VoosManager {
     private HashMap<Integer,Voo> voos;
     private ReentrantLock lock;
     private String utilizadoresCsv;
+    private String voosCsv;
     private int lastidVoo;
     private int lastidReserva;
 
-    public VoosManager(String utilizadoresCsv) {
+    public VoosManager(String utilizadoresCsv,String voosCsv) {
         lock = new ReentrantLock();
         utilizadores = new HashMap<>();
         reservas = new HashMap<>();
         voos = new HashMap<>();
         this.utilizadoresCsv = utilizadoresCsv;
+        this.voosCsv = voosCsv;
         this.lastidVoo = 0;
         this.lastidReserva = 0;
-        //pre população
-        //voos
-        updateVoos(new Voo("Porto","Lisboa",150));
-        updateVoos(new Voo("Madrid","Lisboa",150));
-        updateVoos(new Voo("Lisboa","Tokyo",150));
-        updateVoos(new Voo("Barcelona","Paris",150));
-        //users
-        updateUtilizadores(new Utilizador("admin","admin",1));
-        updateUtilizadores(new Utilizador("pessoa","pessoa",0));
-        //reservas
-        List<Integer> viagem = new ArrayList();
-        viagem.add(1);
-        LocalDate data = LocalDate.of(2022,1,3);
-        updateReservas(new Reserva(viagem,data,"pessoa"));
     }
 
     public void updateUtilizadores(Utilizador u) {
@@ -139,6 +127,13 @@ class VoosManager {
         bw.close();
     }
 
+    public void registoVooCsv(String origem,String destino,int capacidade) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.voosCsv,true));
+        bw.write("\n");
+        bw.write(origem+";"+destino+";"+capacidade);
+        bw.close();
+    }
+
     public void loadUtilizadoresCsv() throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(this.utilizadoresCsv));
         String line;
@@ -148,6 +143,22 @@ class VoosManager {
         }
         br.close();
 
+    }
+
+    public void loadVoosCsv() throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(this.voosCsv));
+        String line;
+        while ((line = br.readLine()) != null){
+            String[] parsed = line.split(";");
+            updateVoos(new Voo(parsed[0],parsed[1],Integer.parseInt(parsed[2])));
+        }
+        br.close();
+
+    }
+
+    public void load() throws IOException {
+        loadUtilizadoresCsv();
+        loadVoosCsv();
     }
 }
 
@@ -347,6 +358,7 @@ class Handler implements Runnable {
                 }
                 if (validoC && validoOD) {
                     manager.updateVoos(new Voo(origem, destino, capacidade));
+                    manager.registoVooCsv(origem,destino,capacidade);
                     sb.append("O voo ").append(origem).append(" -> ").append(destino).append(" com a capacidade de ").append(capacidade).append(" passageiros, foi registado com o id: ").append(id).append(".");
                 } else if (!validoC) {
                     sb.append("Erro ao registar voo: ").append(capacidade).append(" não é uma capacidade válida, experimente [100-250]");
@@ -360,6 +372,8 @@ class Handler implements Runnable {
             }
         }else{
             sb.append("Não tem permissão para adicionar voo");
+            dos.writeUTF(sb.toString());
+            dos.flush();
         }
 
     }
@@ -395,8 +409,10 @@ public class Server{
 
     public static void main (String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(12345);
-        VoosManager manager = new VoosManager("../ProjetoSD/cp/registos.csv");//os ficheiros de persistencia são passados na criação do manager
+        VoosManager manager = new VoosManager("../ProjetoSD/cp/registos.csv",
+                                                "../ProjetoSD/cp/voos.csv");//os ficheiros de persistencia são passados na criação do manager
         manager.loadUtilizadoresCsv();
+        manager.load();
         int i = 0;
 
         while (true) {
