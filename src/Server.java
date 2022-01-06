@@ -26,10 +26,10 @@ class VoosManager {
         this.lastidReserva = 0;
         //pre população
         //voos
-        updateVoos(new Voo(1,"Porto","Lisboa",150));
-        updateVoos(new Voo(2,"Madrid","Lisboa",150));
-        updateVoos(new Voo(3,"Lisboa","Tokyo",150));
-        updateVoos(new Voo(4,"Barcelona","Paris",150));
+        updateVoos(new Voo("Porto","Lisboa",150));
+        updateVoos(new Voo("Madrid","Lisboa",150));
+        updateVoos(new Voo("Lisboa","Tokyo",150));
+        updateVoos(new Voo("Barcelona","Paris",150));
         //users
         updateUtilizadores(new Utilizador("admin","admin",1));
         updateUtilizadores(new Utilizador("pessoa","pessoa",0));
@@ -37,7 +37,7 @@ class VoosManager {
         List<Integer> viagem = new ArrayList();
         viagem.add(1);
         LocalDate data = LocalDate.of(2022,1,3);
-        updateReservas(new Reserva(1,viagem,data,"pessoa"));
+        updateReservas(new Reserva(viagem,data,"pessoa"));
     }
 
     public void updateUtilizadores(Utilizador u) {
@@ -48,8 +48,8 @@ class VoosManager {
 
     public void updateReservas(Reserva r){
         lock.lock();
-        if(r.getCodigo() > this.lastidReserva) this.lastidReserva = r.getCodigo();
-        //adiciona reserva
+        lastidReserva++;
+        r.setCodigo(lastidReserva);
         reservas.put(r.getCodigo(),r);
         //adiciona lotação NAO ESTA A ATUALIZAR
         for(int id : r.getViagem()){
@@ -66,8 +66,9 @@ class VoosManager {
 
     public void updateVoos(Voo v){
         lock.lock();
-        if(v.getId() > this.lastidVoo) this.lastidVoo = v.getId();
-        voos.put(v.getId(),v);
+        lastidVoo++;
+        v.setId(lastidVoo);
+        voos.put(lastidVoo,v);
         lock.unlock();
     }
     public int existsVoo(String origem,String destino){
@@ -102,7 +103,7 @@ class VoosManager {
         for(Reserva r : reservas.values()){
             int i = 0;
             sb = new StringBuilder();
-            sb.append("#CodigoReserva "+r.getCodigo()+" Viagem:");
+            sb.append("#CodigoReserva ").append(r.getCodigo()).append(" Viagem: ");
             for(int idVoo : r.getViagem() ){
                 Voo v = voos.get(idVoo);
                 if(i==0){
@@ -113,8 +114,8 @@ class VoosManager {
                     sb.append("->");
                     sb.append(v.getDestino());
                 }
+                i++;
             }
-            sb.append("\n");
             listaReservas.add(sb.toString());
         }
         return listaReservas;
@@ -306,7 +307,7 @@ class Handler implements Runnable {
                 }
                 //neste momento está a escolher a primeira data possivel
                 if(valido){
-                    manager.updateReservas(new Reserva(manager.getLastidReserva(),idsVoos,datasVoos.get(0),user.getNome()));
+                    manager.updateReservas(new Reserva(idsVoos,datasVoos.get(0),user.getNome()));
                     dos.writeUTF("Viagem reservada com sucesso.");
                 }else{
                     dos.writeUTF("Não foi possivel concluir reserva");
@@ -327,15 +328,14 @@ class Handler implements Runnable {
     public void encerra(){/*todo admin encerrar dia*/}
 
     public void addvoo() throws IOException {
-        //TODO: apenas admin pode
+        StringBuilder sb;
+        sb = new StringBuilder();
         if(logged && user.isAdmin()) {
             boolean validoOD = true;
             boolean validoC = true;
             String origem = dis.readUTF();
             String destino = dis.readUTF();
             String Scapacidade = dis.readUTF();
-            StringBuilder sb;
-            sb = new StringBuilder();
             if (origem.equals(destino)) {
                 validoOD = false;
             }
@@ -346,7 +346,7 @@ class Handler implements Runnable {
                     validoC = false;
                 }
                 if (validoC && validoOD) {
-                    manager.updateVoos(new Voo(id, origem, destino, capacidade));
+                    manager.updateVoos(new Voo(origem, destino, capacidade));
                     sb.append("O voo ").append(origem).append(" -> ").append(destino).append(" com a capacidade de ").append(capacidade).append(" passageiros, foi registado com o id: ").append(id).append(".");
                 } else if (!validoC) {
                     sb.append("Erro ao registar voo: ").append(capacidade).append(" não é uma capacidade válida, experimente [100-250]");
@@ -358,6 +358,8 @@ class Handler implements Runnable {
                 dos.writeUTF(sb.toString());
                 dos.flush();
             }
+        }else{
+            sb.append("Não tem permissão para adicionar voo");
         }
 
     }

@@ -3,15 +3,15 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 public class Voo {
-    private final int id;
+    private int id;
     private final String origem;
     private final String destino;
     private final int capacidade;
     private int lotacao;
 
 
-    public Voo(int id,String origem,String destino,int capacidade){
-        this.id = id;
+    public Voo(String origem,String destino,int capacidade){
+        this.id = -1; //id não atribuido
         this.origem = origem;
         this.destino = destino;
         this.capacidade = capacidade;
@@ -31,6 +31,8 @@ public class Voo {
     public int getId() {
         return id;
     }
+
+    public void setId(int id){this.id = id;}
 
     public int getCapacidade() {
         return capacidade;
@@ -61,7 +63,7 @@ public class Voo {
         String destino = in.readUTF();
         int capacidade = in.readInt();
 
-        return new Voo(id,origem, destino, capacidade);
+        return new Voo(origem, destino, capacidade);
     }
 
     public String toString(){
