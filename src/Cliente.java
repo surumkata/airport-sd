@@ -1,6 +1,8 @@
 import java.io.*;
 import java.net.Socket;
 import java.sql.SQLOutput;
+import java.time.LocalDate;
+import java.time.chrono.ChronoLocalDate;
 import java.util.Objects;
 
 public class Cliente {
@@ -63,8 +65,7 @@ public class Cliente {
         public void sendRegisto(String nome, String password, boolean admin) {
             try{
                 this.dos.writeInt(1); //registo
-                if(admin) this.dos.writeInt(1); //admin
-                else this.dos.writeInt(0); //naoadmin
+                this.dos.writeBoolean(admin);
                 this.dos.writeUTF(nome);
                 this.dos.writeUTF(password);
                 this.dos.flush();
@@ -190,6 +191,34 @@ public class Cliente {
             }
             return logged;
         }
+
+        public void receiveRegisto() {
+            boolean registado = false;
+            try{
+                registado = dis.readBoolean();
+                if(registado)
+                    System.out.println("Registado novo utilizador com sucesso!");
+                else
+                    System.out.println("Erro ao registar novo utilizador.");
+            }
+            catch(IOException e){
+                e.printStackTrace();
+            }
+        }
+
+        public void receiveRegistoA() {
+            boolean registado = false;
+            try{
+                registado = dis.readBoolean();
+                if(registado)
+                    System.out.println("Registado novo admin com sucesso!");
+                else
+                    System.out.println("Erro ao registar novo admin.");
+            }
+            catch(IOException e){
+                e.printStackTrace();
+            }
+        }
     }
 
     private  boolean parser(String userInput,DataInputStream dis,DataOutputStream dos) throws IOException {
@@ -237,11 +266,11 @@ public class Cliente {
                 }
                 case "registo" -> {
                     sender.sendRegisto(tokens[1], tokens[2], false);
-                    receiver.receiveMessage();
+                    receiver.receiveRegisto();
                 }
                 case "registoA" -> {
                     sender.sendRegisto(tokens[1], tokens[2], true);
-                    receiver.receiveMessage();
+                    receiver.receiveRegistoA();
                 }
                 case "reserva" -> {
                     sender.sendReserva(tokens[1],tokens[2]);
@@ -270,7 +299,6 @@ public class Cliente {
     }
 
     public static void main (String[] args) throws IOException {
-
         Socket socket = new Socket("localhost", 12345);
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         DataInputStream dis = new DataInputStream(socket.getInputStream());

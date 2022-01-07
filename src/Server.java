@@ -5,63 +5,66 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
 class VoosManager {
-    private HashMap<String,Utilizador> utilizadores;
+    private HashMap<String,Utilizador> users;
     private HashMap<Integer,Reserva> reservas;
     private HashMap<Integer,Voo> voos;
-    private ReentrantLock lock;
+    private ReadWriteLock userslock = new ReentrantReadWriteLock();
+    private ReadWriteLock reservasLock = new ReentrantReadWriteLock();
+    private ReadWriteLock voosLock = new ReentrantReadWriteLock();
     private String utilizadoresCsv;
     private String voosCsv;
-    private int lastidVoo;
+    private String registosCsv;
     private int lastidReserva;
+    private int lastidVoos;
 
-    public VoosManager(String utilizadoresCsv,String voosCsv) {
-        lock = new ReentrantLock();
-        utilizadores = new HashMap<>();
+    public VoosManager(String utilizadoresCsv,String voosCsv, String registosCsv) {
+        users = new HashMap<>();
         reservas = new HashMap<>();
         voos = new HashMap<>();
         this.utilizadoresCsv = utilizadoresCsv;
         this.voosCsv = voosCsv;
-        this.lastidVoo = 0;
+        this.registosCsv = registosCsv;
         this.lastidReserva = 0;
     }
 
     public void updateUtilizadores(Utilizador u) {
-        lock.lock();
-        utilizadores.put(u.getNome(),u);
-        lock.unlock();
+        userslock.writeLock().lock();
+        users.put(u.getNome(),u);
+        userslock.writeLock().unlock();
     }
 
     public boolean updateReservas(Reserva r){
         boolean done = false;
-        lock.lock();
+        reservasLock.writeLock().lock();
         done = updateLotacao(r.getViagem(),1);
         if(done){
             lastidReserva++;
             r.setCodigo(lastidReserva);
             reservas.put(r.getCodigo(),r);
         }
-        lock.unlock();
+        reservasLock.writeLock().unlock();
         return done;
     }
 
     public void removeReserva(int codReserva){
-        lock.lock();
+        reservasLock.writeLock().lock();
         reservas.remove(codReserva);
-        lock.unlock();
+        reservasLock.writeLock().unlock();
     }
 
     public void updateVoos(Voo v){
-        lock.lock();
-        lastidVoo++;
-        v.setId(lastidVoo);
-        voos.put(lastidVoo,v);
-        lock.unlock();
+        voosLock.writeLock().lock();
+        this.lastidVoos++;
+        voos.put(lastidVoos,v);
+        voosLock.writeLock().unlock();
     }
+
     public boolean updateLotacao(List<Integer> idsVoos,int lugares){
        //não tem locks os locks são feitos no metodo update reservas
         int lot;
@@ -75,36 +78,41 @@ class VoosManager {
                return false;
            }
         }
-        System.out.println("oi");
         for(Integer ids : idsVoos){
              voos.get(ids).addLotacao(lugares);
         }
         return true;
     }
     public int existsVoo(String origem,String destino){
-        for(Voo v : voos.values()){
-            if(v.getOrigem().equals(origem) && v.getDestino().equals(destino)){
-                return v.getId();
-            }
+        try{
+            voosLock.readLock().lock();
+            for(Voo v : voos.values()){
+                if(v.getOrigem().equals(origem) && v.getDestino().equals(destino)){
+                    return v.getId();
+                }
 
+            }
+            return -1;
         }
-        return -1;
+        finally {
+            voosLock.readLock().unlock();
+        }
     }
 
     public boolean existeUtilizador(String name){
-        return this.utilizadores.containsKey(name);
+        return this.users.containsKey(name);
     }
     public boolean existeReserva(int cod){ return this.reservas.containsKey(cod);  }
 
     public VoosList getVoos () {
         try{
-            lock.lock();
+            voosLock.readLock().lock();
             VoosList ret = new VoosList();
             ret.addAll(voos.values());
             return ret;
         }
         finally {
-            lock.unlock();
+            voosLock.readLock().unlock();
         }
     }
 
@@ -115,6 +123,7 @@ class VoosManager {
             int i = 0;
             sb = new StringBuilder();
             sb.append("#CodigoReserva ").append(r.getCodigo()).append(" Viagem: ");
+            voosLock.readLock().lock();
             for(int idVoo : r.getViagem() ){
                 Voo v = voos.get(idVoo);
                 if(i==0){
@@ -127,14 +136,12 @@ class VoosManager {
                 }
                 i++;
             }
+            voosLock.readLock().unlock();
             listaReservas.add(sb.toString());
         }
         return listaReservas;
     }
 
-    public int getLastidVoo() {
-        return lastidVoo;
-    }
     public int getLastidReserva(){
         return lastidReserva;
     }
@@ -144,7 +151,7 @@ class VoosManager {
     }
 
     public Utilizador getUtilizador(String nome) {
-            return utilizadores.get(nome);
+            return users.get(nome);
     }
 
     public void registoUtilizadorCsv(String nome,String password ,int adminPermission) throws IOException {
@@ -154,10 +161,10 @@ class VoosManager {
         bw.close();
     }
 
-    public void registoVooCsv(String origem,String destino,int capacidade) throws IOException {
+    public void registoVooCsv(int id, String origem,String destino,int capacidade) throws IOException {
         BufferedWriter bw = new BufferedWriter(new FileWriter(this.voosCsv,true));
         bw.write("\n");
-        bw.write(origem+";"+destino+";"+capacidade);
+        bw.write(id+";"+origem+";"+destino+";"+capacidade+";"+0);
         bw.close();
     }
 
@@ -166,7 +173,19 @@ class VoosManager {
         String line;
         while ((line = br.readLine()) != null){
             String[] parsed = line.split(";");
-            updateUtilizadores(new Utilizador(parsed[0],parsed[1],Integer.parseInt(parsed[2])));
+            if(parsed.length == 3){
+                try{
+                    String nome = parsed[0];
+                    String password = parsed[1];
+                    int admin = Integer.parseInt(parsed[2]);
+                    if(admin == 1 || admin == 0){
+                        boolean permissao;
+                        permissao = admin == 1;
+                        updateUtilizadores(new Utilizador(nome,password,permissao));
+                    }
+                }
+                catch(NumberFormatException ignored){}
+            }
         }
         br.close();
 
@@ -177,7 +196,17 @@ class VoosManager {
         String line;
         while ((line = br.readLine()) != null){
             String[] parsed = line.split(";");
-            updateVoos(new Voo(Integer.parseInt(parsed[0]),parsed[1],parsed[2],Integer.parseInt(parsed[3]),Integer.parseInt(parsed[4])));
+            if(parsed.length == 5){
+                try{
+                    int id = Integer.parseInt(parsed[0]);
+                    String origem = parsed[1];
+                    String destino = parsed[2];
+                    int cap = Integer.parseInt(parsed[3]);
+                    int lot = Integer.parseInt(parsed[4]);
+                    updateVoos(new Voo(id,origem,destino,cap,lot));
+                }
+                catch(NumberFormatException ignored){}
+            }
         }
         br.close();
 
@@ -219,43 +248,39 @@ class Handler implements Runnable {
     }
 
     public void registo() throws IOException {
-        StringBuilder sb;
-        sb = new StringBuilder();
-        int code = dis.readInt();
-        if(code == 1) {
+        boolean ret;
+        boolean admin = dis.readBoolean();
+        if(admin) {
             if (logged && user.isAdmin()) {
                 String nome = dis.readUTF();
                 String password = dis.readUTF();
                 if (manager.existeUtilizador(nome)) {
-                    sb.append("Erro: Nome de utilizador já existe no sistema!");
+                    ret = false;
                 } else {
-                    manager.updateUtilizadores(new Utilizador(nome, password, 1));
+                    manager.updateUtilizadores(new Utilizador(nome, password, true));
                     manager.registoUtilizadorCsv(nome, password, 0);
-                    sb.append("Utilizador registado com o nome ").append(nome).append(".");
+                    ret = true;
                 }
             } else {
-                sb.append("Você não tem permissoes de admin");
+                ret = false;
             }
         }
-        else if (code == 0) {
-            if (logged) {
+        else {
+            if (!logged) {
                 String nome = dis.readUTF();
                 String password = dis.readUTF();
                 if (manager.existeUtilizador(nome)) {
-                    sb.append("Erro: Nome de utilizador já existe no sistema!");
+                    ret = false;
                 } else {
-                    manager.updateUtilizadores(new Utilizador(nome, password, 0));
+                    manager.updateUtilizadores(new Utilizador(nome, password, false));
                     manager.registoUtilizadorCsv(nome, password, 0);
-                    sb.append("Utilizador registado com o nome ").append(nome).append(".");
+                    ret = true;
                 }
             } else {
-                sb.append("Você ja se encontra logado!");
+                ret = false;
             }
         }
-        else{
-            sb.append("Erro");
-        }
-        dos.writeUTF(sb.toString());
+        dos.writeBoolean(ret);
     }
 
     public void logout() throws IOException {
@@ -384,14 +409,13 @@ class Handler implements Runnable {
             }
             try {
                 int capacidade = Integer.parseInt(Scapacidade);
-                int id = manager.getLastidVoo() + 1;
                 if (capacidade < 100 || capacidade > 250) {
                     validoC = false;
                 }
                 if (validoC && validoOD) {
                     manager.updateVoos(new Voo(-1,origem, destino, capacidade,0));
-                    manager.registoVooCsv(origem,destino,capacidade);
-                    sb.append("O voo ").append(origem).append(" -> ").append(destino).append(" com a capacidade de ").append(capacidade).append(" passageiros, foi registado com o id: ").append(id).append(".");
+                    manager.registoVooCsv(-1,origem,destino,capacidade);
+                    sb.append("O voo ").append(origem).append(" -> ").append(destino).append(" com a capacidade de ").append(capacidade).append(" passageiros, foi registado com sucesso.");
                 } else if (!validoC) {
                     sb.append("Erro ao registar voo: ").append(capacidade).append(" não é uma capacidade válida, experimente [100-250]");
                 } else
@@ -441,9 +465,8 @@ public class Server{
 
     public static void main (String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(12345);
-        VoosManager manager = new VoosManager("../ProjetoSD/cp/registos.csv",
-                                                "../ProjetoSD/cp/voos.csv");//os ficheiros de persistencia são passados na criação do manager
-        manager.loadUtilizadoresCsv();
+        VoosManager manager = new VoosManager("../ProjetoSD/cp/utilizadores.csv",
+                                                "../ProjetoSD/cp/voos.csv","../ProjetoSD/cp/registos.csv");//os ficheiros de persistencia são passados na criação do manager
         manager.load();
         int i = 0;
 
