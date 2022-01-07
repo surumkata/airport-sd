@@ -34,16 +34,17 @@ class VoosManager {
         lock.unlock();
     }
 
-    public void updateReservas(Reserva r){
+    public boolean updateReservas(Reserva r){
+        boolean done = false;
         lock.lock();
-        lastidReserva++;
-        r.setCodigo(lastidReserva);
-        reservas.put(r.getCodigo(),r);
-        //adiciona lotação NAO ESTA A ATUALIZAR
-        for(int id : r.getViagem()){
-            voos.get(id).addLotacao(1);
+        done = updateLotacao(r.getViagem(),1);
+        if(done){
+            lastidReserva++;
+            r.setCodigo(lastidReserva);
+            reservas.put(r.getCodigo(),r);
         }
         lock.unlock();
+        return done;
     }
 
     public void removeReserva(int codReserva){
@@ -58,6 +59,25 @@ class VoosManager {
         v.setId(lastidVoo);
         voos.put(lastidVoo,v);
         lock.unlock();
+    }
+    public boolean updateLotacao(List<Integer> idsVoos,int lugares){
+       //não tem locks os locks são feitos no metodo update reservas
+        int lot;
+        int cap;
+        for(Integer ids : idsVoos){
+           lot =  voos.get(ids).getLotacao();
+           cap =  voos.get(ids).getCapacidade();
+            System.out.println(lot+" "+lugares+"\n");
+            System.out.println(cap);
+           if((lot + lugares) > cap){
+               return false;
+           }
+        }
+        System.out.println("oi");
+        for(Integer ids : idsVoos){
+             voos.get(ids).addLotacao(lugares);
+        }
+        return true;
     }
     public int existsVoo(String origem,String destino){
         for(Voo v : voos.values()){
@@ -296,7 +316,7 @@ class Handler implements Runnable {
             boolean valido = true;
             List<Integer> idsVoos = new ArrayList<>();
             List<LocalDate> datasVoos = new ArrayList<>();
-            //todo: falta verifica lotação
+            //verifica se é valida a viagem que o utilizador quer
             if (viagem.length >= 2) {
                 for (int i = 0; i < viagem.length - 1 && valido; i++) {
                     int id;
@@ -312,8 +332,12 @@ class Handler implements Runnable {
                 }
                 //neste momento está a escolher a primeira data possivel
                 if(valido){
-                    manager.updateReservas(new Reserva(idsVoos,datasVoos.get(0),user.getNome()));
-                    dos.writeUTF("Viagem reservada com sucesso.");
+                    if(manager.updateReservas(new Reserva(idsVoos,datasVoos.get(0),user.getNome()))){
+                          dos.writeUTF("Viagem reservada com sucesso.");
+                    }else{
+                        dos.writeUTF("Lotação esgotada");
+                    }
+
                 }else{
                     dos.writeUTF("Não foi possivel concluir reserva");
                 }
