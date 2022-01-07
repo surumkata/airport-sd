@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 
 class VoosManager {
     private HashMap<String,Utilizador> utilizadores;
@@ -175,7 +177,7 @@ class VoosManager {
         String line;
         while ((line = br.readLine()) != null){
             String[] parsed = line.split(";");
-            updateVoos(new Voo(parsed[0],parsed[1],Integer.parseInt(parsed[2])));
+            updateVoos(new Voo(Integer.parseInt(parsed[0]),parsed[1],parsed[2],Integer.parseInt(parsed[3]),Integer.parseInt(parsed[4])));
         }
         br.close();
 
@@ -387,7 +389,7 @@ class Handler implements Runnable {
                     validoC = false;
                 }
                 if (validoC && validoOD) {
-                    manager.updateVoos(new Voo(origem, destino, capacidade));
+                    manager.updateVoos(new Voo(-1,origem, destino, capacidade,0));
                     manager.registoVooCsv(origem,destino,capacidade);
                     sb.append("O voo ").append(origem).append(" -> ").append(destino).append(" com a capacidade de ").append(capacidade).append(" passageiros, foi registado com o id: ").append(id).append(".");
                 } else if (!validoC) {
