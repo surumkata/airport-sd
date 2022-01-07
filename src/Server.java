@@ -13,31 +13,19 @@ class VoosManager {
     private HashMap<Integer,Voo> voos;
     private ReentrantLock lock;
     private String utilizadoresCsv;
+    private String voosCsv;
     private int lastidVoo;
     private int lastidReserva;
 
-    public VoosManager(String utilizadoresCsv) {
+    public VoosManager(String utilizadoresCsv,String voosCsv) {
         lock = new ReentrantLock();
         utilizadores = new HashMap<>();
         reservas = new HashMap<>();
         voos = new HashMap<>();
         this.utilizadoresCsv = utilizadoresCsv;
+        this.voosCsv = voosCsv;
         this.lastidVoo = 0;
         this.lastidReserva = 0;
-        //pre população
-        //voos
-        updateVoos(new Voo(1,"Porto","Lisboa",150,0));
-        updateVoos(new Voo(2,"Madrid","Lisboa",150,0));
-        updateVoos(new Voo(3,"Lisboa","Tokyo",150,0));
-        updateVoos(new Voo(4,"Barcelona","Paris",150,0));
-        //users
-        updateUtilizadores(new Utilizador("admin","admin",1));
-        updateUtilizadores(new Utilizador("pessoa","pessoa",0));
-        //reservas
-        List<Integer> viagem = new ArrayList();
-        viagem.add(1);
-        LocalDate data = LocalDate.of(2022,1,3);
-        updateReservas(new Reserva(viagem,data,"pessoa"));
     }
 
     public void updateUtilizadores(Utilizador u) {
@@ -46,17 +34,20 @@ class VoosManager {
         lock.unlock();
     }
 
-    public void updateReservas(Reserva r){
+    public boolean updateReservas(Reserva r){
+        boolean done = false;
         lock.lock();
-        lastidReserva++;
-        r.setCodigo(lastidReserva);
-        reservas.put(r.getCodigo(),r);
-        //adiciona lotação NAO ESTA A ATUALIZAR
-        r.getViagem().forEach(i -> voos.get(i).addLotacao(1));
+        done = updateLotacao(r.getViagem(),1);
+        if(done){
+            lastidReserva++;
+            r.setCodigo(lastidReserva);
+            reservas.put(r.getCodigo(),r);
+        }
         lock.unlock();
+        return done;
     }
 
-    public void removeReserva(String codReserva){
+    public void removeReserva(int codReserva){
         lock.lock();
         reservas.remove(codReserva);
         lock.unlock();
@@ -68,6 +59,25 @@ class VoosManager {
         v.setId(lastidVoo);
         voos.put(lastidVoo,v);
         lock.unlock();
+    }
+    public boolean updateLotacao(List<Integer> idsVoos,int lugares){
+       //não tem locks os locks são feitos no metodo update reservas
+        int lot;
+        int cap;
+        for(Integer ids : idsVoos){
+           lot =  voos.get(ids).getLotacao();
+           cap =  voos.get(ids).getCapacidade();
+            System.out.println(lot+" "+lugares+"\n");
+            System.out.println(cap);
+           if((lot + lugares) > cap){
+               return false;
+           }
+        }
+        System.out.println("oi");
+        for(Integer ids : idsVoos){
+             voos.get(ids).addLotacao(lugares);
+        }
+        return true;
     }
     public int existsVoo(String origem,String destino){
         for(Voo v : voos.values()){
@@ -82,6 +92,7 @@ class VoosManager {
     public boolean existeUtilizador(String name){
         return this.utilizadores.containsKey(name);
     }
+    public boolean existeReserva(int cod){ return this.reservas.containsKey(cod);  }
 
     public VoosList getVoos () {
         try{
@@ -126,6 +137,10 @@ class VoosManager {
         return lastidReserva;
     }
 
+    public Reserva getReserva(int cod){
+        return reservas.get(cod);
+    }
+
     public Utilizador getUtilizador(String nome) {
             return utilizadores.get(nome);
     }
@@ -134,6 +149,13 @@ class VoosManager {
         BufferedWriter bw = new BufferedWriter(new FileWriter(this.utilizadoresCsv,true));
         bw.write("\n");
         bw.write(nome+";"+password+";"+adminPermission);
+        bw.close();
+    }
+
+    public void registoVooCsv(String origem,String destino,int capacidade) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.voosCsv,true));
+        bw.write("\n");
+        bw.write(origem+";"+destino+";"+capacidade);
         bw.close();
     }
 
@@ -146,6 +168,22 @@ class VoosManager {
         }
         br.close();
 
+    }
+
+    public void loadVoosCsv() throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(this.voosCsv));
+        String line;
+        while ((line = br.readLine()) != null){
+            String[] parsed = line.split(";");
+            updateVoos(new Voo(parsed[0],parsed[1],Integer.parseInt(parsed[2])));
+        }
+        br.close();
+
+    }
+
+    public void load() throws IOException {
+        loadUtilizadoresCsv();
+        loadVoosCsv();
     }
 }
 
@@ -170,17 +208,6 @@ class Handler implements Runnable {
             e.printStackTrace();
         }
     }
-
-    //quit -> 0
-    //registo -> 1 + (naoadmin 0,admin 1)
-    //login -> 2
-    //logout -> 3
-    //voos -> 4
-    //reservas -> 5
-    //reserva -> 6
-    //cancela -> 7
-    //encerra -> 8
-    //addvoo -> 9
 
     public boolean quit() throws IOException {
         dis.close();
@@ -289,7 +316,7 @@ class Handler implements Runnable {
             boolean valido = true;
             List<Integer> idsVoos = new ArrayList<>();
             List<LocalDate> datasVoos = new ArrayList<>();
-            //todo: falta verifica lotação
+            //verifica se é valida a viagem que o utilizador quer
             if (viagem.length >= 2) {
                 for (int i = 0; i < viagem.length - 1 && valido; i++) {
                     int id;
@@ -305,8 +332,12 @@ class Handler implements Runnable {
                 }
                 //neste momento está a escolher a primeira data possivel
                 if(valido){
-                    manager.updateReservas(new Reserva(idsVoos,datasVoos.get(0),user.getNome()));
-                    dos.writeUTF("Viagem reservada com sucesso.");
+                    if(manager.updateReservas(new Reserva(idsVoos,datasVoos.get(0),user.getNome()))){
+                          dos.writeUTF("Viagem reservada com sucesso.");
+                    }else{
+                        dos.writeUTF("Lotação esgotada");
+                    }
+
                 }else{
                     dos.writeUTF("Não foi possivel concluir reserva");
                 }
@@ -315,11 +346,23 @@ class Handler implements Runnable {
     }
 
     public void cancela() throws IOException {
-        if(logged) {
-            String codReserva = dis.readUTF();
-            //todo: verificar se o user loggado que fez a reserva
-            manager.removeReserva(codReserva);
-            dos.writeUTF("Reserva " + codReserva + " cancelada");
+         StringBuilder sb;
+         sb = new StringBuilder();
+         if(logged) {
+            int codReserva = dis.readInt();
+            if(manager.existeReserva(codReserva)){
+                Reserva r = manager.getReserva(codReserva);
+                if(r.getUtilizador().equals(user.getNome())){
+                      manager.removeReserva(codReserva);
+                }else{
+                    sb.append("Essa reserva não existe");
+                }
+
+            }else{
+                sb.append("Essa reserva não existe");
+             }
+            sb.append("Reserva ").append(codReserva).append(" cancelada");
+            dos.writeUTF(sb.toString());
         }
     }
 
@@ -344,7 +387,8 @@ class Handler implements Runnable {
                     validoC = false;
                 }
                 if (validoC && validoOD) {
-                    manager.updateVoos(new Voo(-1,origem, destino, capacidade,0));
+                    manager.updateVoos(new Voo(origem, destino, capacidade));
+                    manager.registoVooCsv(origem,destino,capacidade);
                     sb.append("O voo ").append(origem).append(" -> ").append(destino).append(" com a capacidade de ").append(capacidade).append(" passageiros, foi registado com o id: ").append(id).append(".");
                 } else if (!validoC) {
                     sb.append("Erro ao registar voo: ").append(capacidade).append(" não é uma capacidade válida, experimente [100-250]");
@@ -358,6 +402,8 @@ class Handler implements Runnable {
             }
         }else{
             sb.append("Não tem permissão para adicionar voo");
+            dos.writeUTF(sb.toString());
+            dos.flush();
         }
 
     }
@@ -393,8 +439,10 @@ public class Server{
 
     public static void main (String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(12345);
-        VoosManager manager = new VoosManager("../ProjetoSD/cp/registos.csv");//os ficheiros de persistencia são passados na criação do manager
+        VoosManager manager = new VoosManager("../ProjetoSD/cp/registos.csv",
+                                                "../ProjetoSD/cp/voos.csv");//os ficheiros de persistencia são passados na criação do manager
         manager.loadUtilizadoresCsv();
+        manager.load();
         int i = 0;
 
         while (true) {
