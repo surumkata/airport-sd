@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
@@ -58,11 +57,13 @@ class VoosManager {
         reservasLock.writeLock().unlock();
     }
 
-    public void updateVoos(Voo v){
+    public int updateVoos(Voo v){
         voosLock.writeLock().lock();
         this.lastidVoos++;
+        v.setId(lastidVoos);
         voos.put(lastidVoos,v);
         voosLock.writeLock().unlock();
+        return lastidVoos;
     }
 
     public boolean updateLotacao(List<Integer> idsVoos,int lugares){
@@ -294,8 +295,7 @@ class Handler implements Runnable {
     }
 
     public void login() throws IOException {
-        StringBuilder sb;
-        sb = new StringBuilder();
+        boolean admin = false;
         if(!logged){
             String nome = dis.readUTF();
             String password = dis.readUTF();
@@ -303,18 +303,12 @@ class Handler implements Runnable {
                 user = manager.getUtilizador(nome);
                 if(password.equals(user.getPassword())){
                     logged = true;
-                    sb.append("Logado com sucesso!");
-                }else{
-                    sb.append("Erro: Password incorreta!");
+                    admin = user.isAdmin();
                 }
-            }else {
-                sb.append("Erro: Utilizador não existe no sistema, experimente registar primeiro!");
-            }
-        }else{
-            sb.append("Vocé ja se encontra logado!");
         }
-        dos.writeUTF(sb.toString());
-        dos.writeBoolean(logged);
+            dos.writeBoolean(logged);
+            if(logged) dos.writeBoolean(admin);
+        }
     }
 
     public void voos() throws IOException {
@@ -396,42 +390,28 @@ class Handler implements Runnable {
     public void encerra(){/*todo admin encerrar dia*/}
 
     public void addvoo() throws IOException {
-        StringBuilder sb;
-        sb = new StringBuilder();
+        int id = -1;
         if(logged && user.isAdmin()) {
             boolean validoOD = true;
             boolean validoC = true;
             String origem = dis.readUTF();
             String destino = dis.readUTF();
-            String Scapacidade = dis.readUTF();
+            int cap = dis.readInt();
             if (origem.equals(destino)) {
                 validoOD = false;
             }
-            try {
-                int capacidade = Integer.parseInt(Scapacidade);
-                if (capacidade < 100 || capacidade > 250) {
-                    validoC = false;
-                }
-                if (validoC && validoOD) {
-                    manager.updateVoos(new Voo(-1,origem, destino, capacidade,0));
-                    manager.registoVooCsv(-1,origem,destino,capacidade);
-                    sb.append("O voo ").append(origem).append(" -> ").append(destino).append(" com a capacidade de ").append(capacidade).append(" passageiros, foi registado com sucesso.");
-                } else if (!validoC) {
-                    sb.append("Erro ao registar voo: ").append(capacidade).append(" não é uma capacidade válida, experimente [100-250]");
-                } else
-                    sb.append("Erro ao registar voo: Origem e destino inválidos");
-            } catch (NumberFormatException e) {
-                sb.append("Erro ao registar voo: ").append(Scapacidade).append(" não é uma capacidade válida");
-            } finally {
-                dos.writeUTF(sb.toString());
-                dos.flush();
+            if (cap < 100 || cap > 250) {
+                validoC = false;
             }
-        }else{
-            sb.append("Não tem permissão para adicionar voo");
-            dos.writeUTF(sb.toString());
-            dos.flush();
+            if (validoC && validoOD) {
+                id = manager.updateVoos(new Voo(-1,origem, destino, cap,0));
+                if(id != -1) {
+                    manager.registoVooCsv(id,origem,destino,cap);
+                }
+            }
+        dos.writeInt(id);
+        dos.flush();
         }
-
     }
 
     public void run() {

@@ -1,16 +1,10 @@
 import java.io.*;
 import java.net.Socket;
-import java.sql.SQLOutput;
-import java.time.LocalDate;
-import java.time.chrono.ChronoLocalDate;
-import java.util.Objects;
 
 public class Cliente {
-    private static boolean logged;
 
-    public Cliente(){
-        logged = false;
-    }
+    private static boolean logged = false;
+    private static boolean admin = false;
 
     public static class Sender{
         private DataOutputStream dos;
@@ -121,12 +115,12 @@ public class Cliente {
             }
         }
 
-        public void sendAddVoo(String origem, String destino, String capacidade) {
+        public void sendAddVoo(String origem, String destino, int capacidade) {
             try{
                 this.dos.writeInt(9); //advoo
                 dos.writeUTF(origem);
                 dos.writeUTF(destino);
-                dos.writeUTF(capacidade);
+                dos.writeInt(capacidade);
                 dos.flush();
             }
             catch (IOException e){
@@ -180,26 +174,23 @@ public class Cliente {
             }
         }
 
-        public boolean receiveLogin() {
-            boolean logged = false;
+        public boolean receiveBoolean(){
             try{
-                System.out.println(dis.readUTF());
-                logged = dis.readBoolean();
+                return dis.readBoolean();
             }
-            catch(IOException e){
+            catch (IOException e){
                 e.printStackTrace();
             }
-            return logged;
+            return false;
         }
 
         public void receiveRegisto() {
-            boolean registado = false;
             try{
-                registado = dis.readBoolean();
-                if(registado)
-                    System.out.println("Registado novo utilizador com sucesso!");
+                if(dis.readBoolean()){
+                    System.out.println("Registado novo utilizador com sucesso!\n");
+                }
                 else
-                    System.out.println("Erro ao registar novo utilizador.");
+                    System.out.println("Erro ao registar novo utilizador. Experimente outro nome de utilizador.\n");
             }
             catch(IOException e){
                 e.printStackTrace();
@@ -207,109 +198,171 @@ public class Cliente {
         }
 
         public void receiveRegistoA() {
-            boolean registado = false;
             try{
-                registado = dis.readBoolean();
+                boolean registado = dis.readBoolean();
                 if(registado)
-                    System.out.println("Registado novo admin com sucesso!");
+                    System.out.println("Registado novo admin com sucesso!\n");
                 else
-                    System.out.println("Erro ao registar novo admin.");
+                    System.out.println("Erro ao registar novo admin. Experimente outro nome de utilizador.\n");
             }
             catch(IOException e){
                 e.printStackTrace();
             }
         }
+
+        public int receiveAddVoo() {
+            int id = -1;
+            try{
+                id = dis.readInt();
+            }
+            catch(IOException e){
+                e.printStackTrace();
+            }
+            return id;
+        }
     }
 
-    private  boolean parser(String userInput,DataInputStream dis,DataOutputStream dos) throws IOException {
-        String[] tokens = userInput.split(" ");
+    private  boolean commands(DataInputStream dis, DataOutputStream dos) throws IOException {
         Sender sender = new Sender(dos);
         Receiver receiver = new Receiver(dis);
-        if(!logged && !Objects.equals(tokens[0], "login") && !Objects.equals(tokens[0], "registo")&&!Objects.equals(tokens[0], "quit") ){
-            System.out.println("Ainda não se encontra loggado");
-        }else if(tokens.length==1){
-            switch (tokens[0]) {
-                case "voos" -> {
+        BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
+        boolean finish = false;
+        if (!admin) {
+            StringBuilder sb;
+            sb = new StringBuilder();
+            sb.append("VooManager\n");
+            sb.append("1) Ver voos.\n");
+            sb.append("2) Ver reservas\n");
+            sb.append("3) Fazer reserva\n");
+            sb.append("4) Cancelar reserva\n");
+            sb.append("5) Logout\n");
+            sb.append("6) Sair\n");
+            sb.append("\n");
+            sb.append("Insira a opção: ");
+            System.out.println(sb);
+            String option = stdin.readLine();
+
+            switch (option) {
+                case "1" -> {
                     sender.sendVoos();
                     receiver.receiveVoos();
                 }
-                case "reservas" -> {
+                case "2" -> {
                     sender.sendReservas();
                     receiver.receiveReservas();
-                    dos.flush();
                 }
-                case "logout" -> {
+                case "3" -> {
+                    System.out.println("Escreva o percuso de toda a vigem. ex: origem;destino1;destino2");
+                    String viagens = stdin.readLine();
+                    System.out.println("Escreva as datas que tem desponiblidade. ex: data1;data2;data3");
+                    String datas = stdin.readLine(); //todo: devia validar ja as datas aqui antes de chatear o server
+                    sender.sendReserva(viagens, datas);
+                    receiver.receiveMessage();
+                }
+                case "4" -> {
+                    System.out.print("Escreva o id da reserva que pretende cancelar: ");
+                    String id = stdin.readLine();
+                    sender.sendCancela(id);
+                    System.out.println(dis.readUTF());
+                }
+                case "5" -> {
                     sender.sendLogout();
                     logged = false;
                     receiver.receiveMessage();
                 }
-                case "help" -> System.out.println(comandosDisponiveis());
-                case "quit" -> {
+                case "6" -> {
                     sender.sendQuit();
-                    return true;
+                    finish = true;
                 }
             }
-        }else if(tokens.length==2){
-            if(tokens[0].equals("encerra")){
-                sender.sendEncerra(tokens[1]);
-            }else if(tokens[0].equals("cancela")){
-                sender.sendCancela(tokens[1]);
-
-                System.out.println(dis.readUTF());
-                //todo: cancela reserva codReserva = token[1] (utilizador)
-            }
-        }else if(tokens.length==3){
-            switch (tokens[0]) {
-                case "login" -> {
-                    sender.sendLogin(tokens[1], tokens[2]);
-                    logged = receiver.receiveLogin();
+        }
+        else {
+            StringBuilder sb;
+            sb = new StringBuilder();
+            sb.append("VooManager\n");
+            sb.append("1) Ver voos.\n");
+            sb.append("2) Registar novo admin\n");
+            sb.append("3) Adicionar voo\n");
+            sb.append("4) Encerrar dia\n");
+            sb.append("5) Logout\n");
+            sb.append("6) Sair\n");
+            sb.append("\n");
+            sb.append("Insira a opção: ");
+            System.out.println(sb);
+            String option = stdin.readLine();
+            switch (option) {
+                case "1" -> {
+                    sender.sendVoos();
+                    receiver.receiveVoos();
                 }
-                case "registo" -> {
-                    sender.sendRegisto(tokens[1], tokens[2], false);
-                    receiver.receiveRegisto();
-                }
-                case "registoA" -> {
-                    sender.sendRegisto(tokens[1], tokens[2], true);
+                case "2" -> {
+                    System.out.print("Escreva o nome de utilizador: ");
+                    String nome = stdin.readLine();
+                    System.out.print("Escreva a password: ");
+                    String password = stdin.readLine();
+                    sender.sendRegisto(nome, password, true);
                     receiver.receiveRegistoA();
                 }
-                case "reserva" -> {
-                    sender.sendReserva(tokens[1],tokens[2]);
+                case "3" -> {
+                    System.out.println("Escreva o percuso de toda a vigem. ex: origem;destino1;destino2:");
+                    String viagens = stdin.readLine();
+                    System.out.println("Escreva as datas que tem desponiblidade. ex: data1;data2;data3:");
+                    String datas = stdin.readLine(); //todo: devia validar ja as datas aqui antes de chatear o server
+                    sender.sendReserva(viagens, datas);
                     receiver.receiveMessage();
                 }
+                case "4" -> {
+                    System.out.println("Insira a origem do voo: ");
+                    String origem = stdin.readLine();
+                    System.out.println("Insira o destino do voo: ");
+                    String destino = stdin.readLine();
+                    System.out.println("Insira a capacidade [de 100 a 250] do voo: ");
+                    boolean valido = false;
+                    int cap = 0;
+                    while (!valido){
+                        try{
+                            cap = Integer.parseInt(stdin.readLine());
+                            if(cap > 100 && cap < 250){
+                                valido = true;
+                            }
+                        }
+                        catch (NumberFormatException ignored){}
+                        if(!valido) System.out.println("Erro: capacidade inválida, insira novamente.\n");
+                    }
+                    sender.sendAddVoo(origem,destino,cap);
+                    int id;
+                    if((id = receiver.receiveAddVoo()) != -1){
+                        System.out.println("Adicionado voo com sucesso. Id do Voo: "+id+".\n");
+                    }
+                    else System.out.println("Erro ao adicionar voo!\n");
+                }
+                case "5" -> {
+                    sender.sendLogout();
+                    logged = false;
+                    admin = false;
+                    receiver.receiveMessage();
+                }
+                case "6" -> {
+                    sender.sendQuit();
+                    finish = true;
+                }
             }
-        }else if(tokens.length==4 && tokens[0].equals("addvoo")){
-            sender.sendAddVoo(tokens[1],tokens[2],tokens[3]);
-            receiver.receiveMessage();
         }
-        else System.out.println("Comando inexistente!");
-
-        return false;
-
+        return finish;
     }
 
-    public static String comandosDisponiveis(){
-        StringBuilder sb;
-        sb = new StringBuilder();
-        sb.append("Comandos Disponíveis\n");
-        sb.append("Registar -> registo nome password\n");
-        sb.append("Login -> login nome password\n");
-        sb.append("Logout -> logout\n");
-        //todo: meter todos
-        return sb.toString();
-    }
 
     public static void main (String[] args) throws IOException {
         Socket socket = new Socket("localhost", 12345);
-        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         DataInputStream dis = new DataInputStream(socket.getInputStream());
         DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
         Cliente client = new Cliente();
 
-        String userInput;
         boolean finish = false;
-            while ((!finish && (userInput = in.readLine()) != null)) {
+            while (!finish) {
                 try {
-                    finish = client.parser(userInput,dis,dos);
+                    if (!logged) client.login(dis,dos);
+                    if (logged) finish = client.commands(dis,dos);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -320,5 +373,44 @@ public class Cliente {
 
 
         System.out.println("Goodbye!");
+    }
+
+    private void login(DataInputStream dis, DataOutputStream dos) throws IOException {
+        Sender sender = new Sender(dos);
+        Receiver receiver = new Receiver(dis);
+        BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
+        StringBuilder sb;
+        sb = new StringBuilder();
+        sb.append("VooManager\n");
+        sb.append("1) Registar nova conta.\n");
+        sb.append("2) Iniciar sessão.\n");
+        sb.append("\n");
+        sb.append("Insira a opção: ");
+        System.out.println(sb);
+        String option = stdin.readLine();
+
+        if(option.equals("1") || option.equals("2")){
+            System.out.print("Escreva o nome de utilizador: ");
+            String nome = stdin.readLine();
+            System.out.print("Escreva a password: ");
+            String password = stdin.readLine();
+            if(option.equals("1")){
+                sender.sendRegisto(nome,password,false);
+                receiver.receiveRegisto();
+            }
+            else{
+                sender.sendLogin(nome,password);
+                logged = receiver.receiveBoolean();
+                if(logged) {
+                    admin = dis.readBoolean();
+                    if(admin) System.out.println("Admin logado com sucesso!\n");
+                    else System.out.println("Utilizador logado com sucesso!\n");
+                }
+                else System.out.println("Erro ao dar login!\n");
+            }
+        }
+        else{
+            System.out.println("Opção inválida!\n");
+        }
     }
 }
