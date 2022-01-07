@@ -26,10 +26,10 @@ class VoosManager {
         this.lastidReserva = 0;
         //pre população
         //voos
-        updateVoos(new Voo("Porto","Lisboa",150));
-        updateVoos(new Voo("Madrid","Lisboa",150));
-        updateVoos(new Voo("Lisboa","Tokyo",150));
-        updateVoos(new Voo("Barcelona","Paris",150));
+        updateVoos(new Voo(1,"Porto","Lisboa",150,0));
+        updateVoos(new Voo(2,"Madrid","Lisboa",150,0));
+        updateVoos(new Voo(3,"Lisboa","Tokyo",150,0));
+        updateVoos(new Voo(4,"Barcelona","Paris",150,0));
         //users
         updateUtilizadores(new Utilizador("admin","admin",1));
         updateUtilizadores(new Utilizador("pessoa","pessoa",0));
@@ -52,9 +52,7 @@ class VoosManager {
         r.setCodigo(lastidReserva);
         reservas.put(r.getCodigo(),r);
         //adiciona lotação NAO ESTA A ATUALIZAR
-        for(int id : r.getViagem()){
-            voos.get(id).addLotacao(1);
-        }
+        r.getViagem().forEach(i -> voos.get(i).addLotacao(1));
         lock.unlock();
     }
 
@@ -346,7 +344,7 @@ class Handler implements Runnable {
                     validoC = false;
                 }
                 if (validoC && validoOD) {
-                    manager.updateVoos(new Voo(origem, destino, capacidade));
+                    manager.updateVoos(new Voo(-1,origem, destino, capacidade,0));
                     sb.append("O voo ").append(origem).append(" -> ").append(destino).append(" com a capacidade de ").append(capacidade).append(" passageiros, foi registado com o id: ").append(id).append(".");
                 } else if (!validoC) {
                     sb.append("Erro ao registar voo: ").append(capacidade).append(" não é uma capacidade válida, experimente [100-250]");

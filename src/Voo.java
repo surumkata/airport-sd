@@ -10,12 +10,12 @@ public class Voo {
     private int lotacao;
 
 
-    public Voo(String origem,String destino,int capacidade){
-        this.id = -1; //id não atribuido
+    public Voo(int id, String origem,String destino,int capacidade,int lotacao){
+        this.id = id;
         this.origem = origem;
         this.destino = destino;
         this.capacidade = capacidade;
-        this.lotacao = 0;
+        this.lotacao = lotacao;
     }
 
     public void addPassageiro(){
@@ -55,6 +55,7 @@ public class Voo {
         out.writeUTF(this.origem);
         out.writeUTF(this.destino);
         out.writeInt(this.capacidade);
+        out.writeInt(this.lotacao);
     }
 
     public static Voo deserialize(DataInputStream in) throws IOException {
@@ -62,14 +63,15 @@ public class Voo {
         String origem = in.readUTF();
         String destino = in.readUTF();
         int capacidade = in.readInt();
+        int lotacao = in.readInt();
 
-        return new Voo(origem, destino, capacidade);
+        return new Voo(id, origem, destino, capacidade,lotacao);
     }
 
     public String toString(){
         StringBuilder sb;
         sb = new StringBuilder();
-        sb.append(this.origem).append("->").append(this.destino).append(" ["+lotacao+"/"+capacidade+"]");
+        sb.append(this.origem).append("->").append(this.destino).append(" [").append(lotacao).append("/").append(capacidade).append("]");
         return sb.toString();
     }
 /*

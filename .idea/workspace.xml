@@ -3,15 +3,14 @@
   <component name="ChangeListManager">
     <list default="true" id="2fa06b62-c16a-49ae-8c57-6c968198a03d" name="Changes" comment="listar reservas do utilizador (tem um bug)">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cp/registos.csv" beforeDir="false" afterPath="$PROJECT_DIR$/cp/registos.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente$Receiver.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente$Receiver.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente$Sender.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente$Sender.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Handler.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Handler.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Reserva.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Reserva.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Server.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Server.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Voo.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Voo.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/VoosManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/VoosManager.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Reserva.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Reserva.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Server.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Voo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Voo.java" afterDir="false" />
     </list>
@@ -47,7 +46,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../aula8" />
+    <property name="last_opened_file_path" value="$USER_HOME$/Desktop/TrabalhoSD-main" />
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.0" />
     <property name="project.structure.side.proportion" value="0.0" />
