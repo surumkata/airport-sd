@@ -2,53 +2,112 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
 class VoosManager {
     private HashMap<String,Utilizador> users;
     private HashMap<Integer,Reserva> reservas;
-    private HashMap<Integer,Voo> voos;
+    private HashMap<String,Voo> voos;
     private ReadWriteLock userslock = new ReentrantReadWriteLock();
     private ReadWriteLock reservasLock = new ReentrantReadWriteLock();
     private ReadWriteLock voosLock = new ReentrantReadWriteLock();
-    private String utilizadoresCsv;
-    private String voosCsv;
-    private String registosCsv;
+    private ReentrantLock [] fileLock = new ReentrantLock[4];
+    private String utilizadoresCsv; //[0]
+    private String voosCsv; //[1]
+    private String reservasCsv; //[2]
+    private String datasEncerradasCsv; //[3]
     private int lastidReserva;
-    private int lastidVoos;
+    private LocalDate dataArranque  = LocalDate.now();
+    private List<LocalDate> datasEncerradas;
+    private ReadWriteLock datasLock = new ReentrantReadWriteLock();
 
-    public VoosManager(String utilizadoresCsv,String voosCsv, String registosCsv) {
+    public VoosManager(String utilizadoresCsv, String voosCsv, String reservasCsv,String datasEncerradasCsv) {
         users = new HashMap<>();
         reservas = new HashMap<>();
         voos = new HashMap<>();
         this.utilizadoresCsv = utilizadoresCsv;
         this.voosCsv = voosCsv;
-        this.registosCsv = registosCsv;
+        this.reservasCsv = reservasCsv;
         this.lastidReserva = 0;
-    }
-
-    public void updateUtilizadores(Utilizador u) {
-        userslock.writeLock().lock();
-        users.put(u.getNome(),u);
-        userslock.writeLock().unlock();
-    }
-
-    public boolean updateReservas(Reserva r){
-        boolean done = false;
-        reservasLock.writeLock().lock();
-        done = updateLotacao(r.getViagem(),1);
-        if(done){
-            lastidReserva++;
-            r.setCodigo(lastidReserva);
-            reservas.put(r.getCodigo(),r);
+        this.datasEncerradas = new ArrayList<>();
+        this.datasEncerradasCsv = datasEncerradasCsv;
+        for(int i = 0; i < 4; i++){
+            fileLock[i] = new ReentrantLock();
         }
-        reservasLock.writeLock().unlock();
-        return done;
+    }
+
+    public boolean updateUtilizadores(Utilizador u) {
+        boolean added = false;
+        userslock.writeLock().lock();
+        if(!users.containsKey(u.getNome())) {
+            users.put(u.getNome(), u);
+            added = true;
+        }
+        userslock.writeLock().unlock();
+        return added;
+    }
+
+    public Reserva createReserva(String user, String[] pontos, String[] datas){
+        Reserva nova = null;
+        LocalDate data = null;
+        boolean dataValida = false;
+
+        datasLock.readLock().lock();
+        for(int i = 0; i < datas.length && !dataValida; i++){
+            try{
+                LocalDate dia = LocalDate.parse(datas[i]);
+                if(!datasEncerradas.contains(dia) && !dia.isBefore(dataArranque)) {
+                    dataValida = true;
+                    data = dia;
+                }
+            }
+            catch (DateTimeParseException ignored){}
+        }
+        boolean pontosValidos = true;
+        List<String> viagem = new ArrayList<>();
+        if(data != null){
+            voosLock.writeLock().lock();
+            for(int i = 0; i < pontos.length-1 && pontosValidos; i++){
+                String id = pontos[i]+pontos[i+1];
+                if(!(existsVoo(id) && haveLotacao(id)))
+                    pontosValidos = false;
+                else viagem.add(id);
+            }
+            if(pontosValidos){
+                for(String id : viagem){
+                    voos.get(id).addPassageiro();
+                }
+                reservasLock.writeLock().lock();
+                datasLock.readLock().unlock();
+                voosLock.writeLock().unlock();
+                this.lastidReserva++;
+                int cod = lastidReserva;
+                nova = new Reserva(cod,viagem,data,user);
+                reservas.put(cod,nova);
+                reservasLock.writeLock().unlock();
+            }
+        }
+
+        return nova;
+    }
+
+    private boolean haveLotacao(String id) {
+        try{
+            voosLock.readLock().lock();
+            Voo v = voos.get(id);
+            return v.getLotacao() < v.getCapacidade();
+        }
+        finally {
+            voosLock.readLock().unlock();
+        }
     }
 
     public void removeReserva(int codReserva){
@@ -57,43 +116,26 @@ class VoosManager {
         reservasLock.writeLock().unlock();
     }
 
-    public int updateVoos(Voo v){
+    public Voo updateVoos(Voo v){
+        Voo novo = v.clone();
+        String origemedestino = novo.getOrigem()+novo.getDestino();
+        int i = 2;
+        String id = origemedestino;
         voosLock.writeLock().lock();
-        this.lastidVoos++;
-        v.setId(lastidVoos);
-        voos.put(lastidVoos,v);
+        while(voos.containsKey(id)){
+            id = origemedestino+"#"+i;
+            i++;
+        }
+        novo.setId(id);
+        voos.put(novo.getId(),novo);
         voosLock.writeLock().unlock();
-        return lastidVoos;
+        return novo;
     }
 
-    public boolean updateLotacao(List<Integer> idsVoos,int lugares){
-       //não tem locks os locks são feitos no metodo update reservas
-        int lot;
-        int cap;
-        for(Integer ids : idsVoos){
-           lot =  voos.get(ids).getLotacao();
-           cap =  voos.get(ids).getCapacidade();
-            System.out.println(lot+" "+lugares+"\n");
-            System.out.println(cap);
-           if((lot + lugares) > cap){
-               return false;
-           }
-        }
-        for(Integer ids : idsVoos){
-             voos.get(ids).addLotacao(lugares);
-        }
-        return true;
-    }
-    public int existsVoo(String origem,String destino){
+    public boolean existsVoo(String id){
         try{
             voosLock.readLock().lock();
-            for(Voo v : voos.values()){
-                if(v.getOrigem().equals(origem) && v.getDestino().equals(destino)){
-                    return v.getId();
-                }
-
-            }
-            return -1;
+            return voos.containsKey(id);
         }
         finally {
             voosLock.readLock().unlock();
@@ -101,7 +143,13 @@ class VoosManager {
     }
 
     public boolean existeUtilizador(String name){
-        return this.users.containsKey(name);
+        try{
+            userslock.readLock().lock();
+            return this.users.containsKey(name);
+        }
+        finally {
+            userslock.readLock().unlock();
+        }
     }
     public boolean existeReserva(int cod){ return this.reservas.containsKey(cod);  }
 
@@ -120,53 +168,120 @@ class VoosManager {
     public ArrayList<String> getReservasVoos(String nome){
         ArrayList<String> listaReservas = new ArrayList<>();
         StringBuilder sb;
-        for(Reserva r : reservas.values()){
-            int i = 0;
-            sb = new StringBuilder();
-            sb.append("#CodigoReserva ").append(r.getCodigo()).append(" Viagem: ");
-            voosLock.readLock().lock();
-            for(int idVoo : r.getViagem() ){
-                Voo v = voos.get(idVoo);
-                if(i==0){
-                    sb.append(v.getOrigem());
-                    sb.append("->");
-                    sb.append(v.getDestino());
-                }else{
-                    sb.append("->");
-                    sb.append(v.getDestino());
+        reservasLock.readLock().lock();
+        Collection<Reserva> rs = reservas.values();
+        reservasLock.readLock().unlock();
+        for(Reserva r : rs){
+            if(r.getUtilizador().equals(nome)) {
+                int i = 0;
+                sb = new StringBuilder();
+                sb.append("#CodigoReserva ").append(r.getCodigo()).append(" Viagem: ");
+                voosLock.readLock().lock();
+                for (String idVoo : r.getViagem()) {
+                    Voo v = voos.get(idVoo);
+                    if (i == 0) {
+                        sb.append(v.getOrigem());
+                        sb.append("->");
+                        sb.append(v.getDestino());
+                    } else {
+                        sb.append("->");
+                        sb.append(v.getDestino());
+                    }
+                    i++;
                 }
-                i++;
+                voosLock.readLock().unlock();
+                listaReservas.add(sb.toString());
             }
-            voosLock.readLock().unlock();
-            listaReservas.add(sb.toString());
         }
+
         return listaReservas;
     }
 
-    public int getLastidReserva(){
-        return lastidReserva;
-    }
 
     public Reserva getReserva(int cod){
         return reservas.get(cod);
     }
 
     public Utilizador getUtilizador(String nome) {
+        try{
+            userslock.readLock().lock();
             return users.get(nome);
+        }
+        finally {
+            userslock.readLock().unlock();
+        }
     }
 
-    public void registoUtilizadorCsv(String nome,String password ,int adminPermission) throws IOException {
+    public void registoUtilizadorCsv(Utilizador u) throws IOException {
+        fileLock[0].lock();
         BufferedWriter bw = new BufferedWriter(new FileWriter(this.utilizadoresCsv,true));
+        bw.write(u.getNome()+";"+u.getPassword()+";");
+        if(u.isAdmin()) bw.write("1");
+        else bw.write("0");
         bw.write("\n");
-        bw.write(nome+";"+password+";"+adminPermission);
         bw.close();
+        fileLock[0].unlock();
     }
 
-    public void registoVooCsv(int id, String origem,String destino,int capacidade) throws IOException {
+    public void registoVooCsv(Voo v) throws IOException {
+        fileLock[1].lock();
         BufferedWriter bw = new BufferedWriter(new FileWriter(this.voosCsv,true));
-        bw.write("\n");
-        bw.write(id+";"+origem+";"+destino+";"+capacidade+";"+0);
+        bw.write(v.getId()+";"+v.getOrigem()+";"+v.getDestino()+";"+v.getCapacidade()+";"+0+"\n");
         bw.close();
+        fileLock[1].unlock();
+    }
+
+    public void registoReservaCsv(Reserva r) throws IOException {
+        fileLock[2].lock();
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.reservasCsv,true));
+        bw.write(r.getCodigo()+";"+r.getUtilizador()+";"+r.getData()+";");
+        r.getViagem().forEach(k -> {
+            try {
+                bw.write(k+"-");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        bw.write("\n");
+        bw.close();
+        fileLock[2].unlock();
+    }
+
+    public void registoTodasReservasCsv() throws IOException {
+        fileLock[2].lock();
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.reservasCsv,true));
+        for(Reserva r : reservas.values()) {
+            bw.write(r.getCodigo() + ";" + r.getUtilizador() + ";" + r.getData() + ";");
+            r.getViagem().forEach(k -> {
+                try {
+                    bw.write(k + "-");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            bw.write("\n");
+            bw.close();
+        }
+        fileLock[2].unlock();
+    }
+
+    public void registoDataEncerrada(LocalDate data) throws IOException {
+        fileLock[3].lock();
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.datasEncerradasCsv,true));
+        bw.write(data.toString()+"\n");
+        bw.close();
+        fileLock[3].unlock();
+    }
+
+    public void registoTodasDatasEncerradasCsv() throws IOException {
+        fileLock[3].lock();
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.reservasCsv,true));
+        for(LocalDate data : datasEncerradas) {
+            bw.write(data.toString()+"\n");
+            bw.write("\n");
+            bw.close();
+        }
+        fileLock[3].unlock();
     }
 
     public void loadUtilizadoresCsv() throws IOException {
@@ -182,7 +297,8 @@ class VoosManager {
                     if(admin == 1 || admin == 0){
                         boolean permissao;
                         permissao = admin == 1;
-                        updateUtilizadores(new Utilizador(nome,password,permissao));
+                        Utilizador u = new Utilizador(nome,password,permissao);
+                        users.put(nome,u);
                     }
                 }
                 catch(NumberFormatException ignored){}
@@ -199,23 +315,125 @@ class VoosManager {
             String[] parsed = line.split(";");
             if(parsed.length == 5){
                 try{
-                    int id = Integer.parseInt(parsed[0]);
+                    String id = parsed[0];
                     String origem = parsed[1];
                     String destino = parsed[2];
                     int cap = Integer.parseInt(parsed[3]);
                     int lot = Integer.parseInt(parsed[4]);
-                    updateVoos(new Voo(id,origem,destino,cap,lot));
+                    Voo v = new Voo(id,origem,destino,cap,lot);
+                    voos.put(id,v);
                 }
                 catch(NumberFormatException ignored){}
             }
         }
         br.close();
+    }
 
+
+    public void loadReservasCsv() throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(this.reservasCsv));
+        String line;
+        while ((line = br.readLine()) != null){
+            String[] parsed = line.split(";");
+            if(parsed.length == 4){
+                try{
+                    int cod = Integer.parseInt(parsed[0]);
+                    String utilizador = parsed[1];
+                    LocalDate data = LocalDate.parse(parsed[2]);
+                    String[] idsViagem = parsed[3].split("-");
+                    if(existeUtilizador(utilizador) && data.isAfter(dataArranque) && idsViagem.length > 1){
+                        boolean existem = true;
+                        List<String> viagem = new ArrayList<>();
+                        for(int i = 0; i < idsViagem.length && existem; i++){
+                            String id = idsViagem[i];
+                            existem = existsVoo(id);
+                            viagem.add(id);
+                        }
+                        if(existem) {
+                            Reserva r = new Reserva(cod,viagem,data,utilizador);
+                            reservas.put(cod,r);
+                            if(lastidReserva < cod) lastidReserva = cod;
+                        }
+                    }
+                }
+                catch (DateTimeParseException | NumberFormatException ignored){}
+            }
+        }
+        br.close();
+    }
+
+    public void loadDatasEncerradasCsv() throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(this.datasEncerradasCsv));
+        String data;
+        while ((data = br.readLine()) != null){
+            try{
+                LocalDate dataEncerrada = LocalDate.parse(data);
+                if(!dataEncerrada.isBefore(dataArranque) && !datasEncerradas.contains(dataEncerrada)){
+                    datasEncerradas.add(dataEncerrada);
+                }
+            }
+            catch (DateTimeParseException ignored){}
+        }
+        br.close();
+        registoTodasDatasEncerradasCsv(); //para caso tenha lido datas invalidas, reescrever corretamente
     }
 
     public void load() throws IOException {
         loadUtilizadoresCsv();
         loadVoosCsv();
+        loadReservasCsv();
+        loadDatasEncerradasCsv();
+    }
+
+    public boolean checkCredentials(String nome, String password) {
+        try{
+            userslock.readLock().lock();
+            return users.containsKey(nome) && users.get(nome).getPassword().equals(password);
+        }
+        finally {
+            userslock.readLock().unlock();
+        }
+    }
+
+    public boolean encerraDia(LocalDate data) {
+        try {
+            datasLock.writeLock().lock();
+            if (!datasEncerradas.contains(data) && (data.isAfter(dataArranque) || data.equals(dataArranque))) {
+                datasEncerradas.add(data);
+                registoDataEncerrada(data);
+                return true;
+            } else return false;
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            datasLock.writeLock().unlock();
+        }
+        return false;
+    }
+
+    public boolean cancelaReserva(int codReserva) {
+        boolean cancelada = false;
+        reservasLock.writeLock().lock();
+        Reserva r = reservas.get(codReserva);
+        LocalDate data = r.getData();
+        datasLock.readLock().lock();
+        if(!datasEncerradas.contains(data)){
+            List<String> viagem = r.getViagem();
+            datasLock.readLock().unlock();
+            voosLock.writeLock().lock();
+            for(String id : viagem){
+                voos.get(id).removePassageiro();
+            }
+            voosLock.writeLock().unlock();
+            reservas.remove(codReserva);
+            try{
+                registoTodasReservasCsv();
+            }
+            catch(IOException ignored){}
+            reservasLock.writeLock().unlock();
+            cancelada = true;
+        }
+        return cancelada;
     }
 }
 
@@ -245,6 +463,7 @@ class Handler implements Runnable {
         dis.close();
         dos.close();
         socket.close();
+        System.out.println("C"+idC+"fechando a socket");
         return true;
     }
 
@@ -252,176 +471,136 @@ class Handler implements Runnable {
         boolean ret;
         boolean admin = dis.readBoolean();
         if(admin) {
-            if (logged && user.isAdmin()) {
-                String nome = dis.readUTF();
-                String password = dis.readUTF();
-                if (manager.existeUtilizador(nome)) {
-                    ret = false;
-                } else {
-                    manager.updateUtilizadores(new Utilizador(nome, password, true));
-                    manager.registoUtilizadorCsv(nome, password, 0);
-                    ret = true;
-                }
-            } else {
-                ret = false;
+            System.out.println("C"+idC+": começando registo admin");
+            String nome = dis.readUTF();
+            String password = dis.readUTF();
+            Utilizador u = new Utilizador(nome, password, true);
+            ret = manager.updateUtilizadores(u);
+            if(ret) {
+                manager.registoUtilizadorCsv(u);
+                System.out.println("C"+idC+": registado admin com sucesso");
             }
-        }
-        else {
-            if (!logged) {
-                String nome = dis.readUTF();
-                String password = dis.readUTF();
-                if (manager.existeUtilizador(nome)) {
-                    ret = false;
-                } else {
-                    manager.updateUtilizadores(new Utilizador(nome, password, false));
-                    manager.registoUtilizadorCsv(nome, password, 0);
-                    ret = true;
-                }
-            } else {
-                ret = false;
+        } else {
+            System.out.println("C"+idC+": começando registo utilizador");
+            String nome = dis.readUTF();
+            String password = dis.readUTF();
+            Utilizador u = new Utilizador(nome, password, false);
+            ret = manager.updateUtilizadores(u);
+            if(ret) {
+                manager.registoUtilizadorCsv(u);
+                System.out.println("C"+idC+": registado utilizador com sucesso");
             }
         }
         dos.writeBoolean(ret);
+        System.out.println("C"+idC+": mandando o booleano");
     }
 
     public void logout() throws IOException {
-        if(logged) {
-            logged = false;
-            user = null;
-            dos.writeUTF("Deslogado com sucesso!");
-        }
-        else dos.writeUTF("Você não se encontra logado!");
-        dos.flush();
+        user = null;
+        System.out.println("C"+idC+": logout");
     }
 
     public void login() throws IOException {
+        System.out.println("C"+idC+": começando login");
         boolean admin = false;
-        if(!logged){
-            String nome = dis.readUTF();
-            String password = dis.readUTF();
-            if(manager.existeUtilizador(nome)){
-                user = manager.getUtilizador(nome);
-                if(password.equals(user.getPassword())){
-                    logged = true;
-                    admin = user.isAdmin();
-                }
+        boolean logged = false;
+        String nome = dis.readUTF();
+        String password = dis.readUTF();
+        if(manager.checkCredentials(nome,password)){
+            user = manager.getUtilizador(nome);
+            logged = true;
+            admin = user.isAdmin();
         }
-            dos.writeBoolean(logged);
-            if(logged) dos.writeBoolean(admin);
+        dos.writeBoolean(logged);
+        System.out.println("C"+idC+": mandando o booleano de logged");
+        if(logged) {
+            dos.writeBoolean(admin);
+            System.out.println("C"+idC+": mandando o booleano de admin");
         }
     }
 
     public void voos() throws IOException {
-        if(logged) {
-            VoosList voos = manager.getVoos();
-            voos.serialize(dos);
-        }
-        else{
-            VoosList voos = new VoosList();
-            voos.serialize(dos);
-        }
+        System.out.println("C"+idC+": getting voos");
+        VoosList voos = manager.getVoos();
+        voos.serialize(dos);
+        System.out.println("C"+idC+": mandando os voos");
     }
 
-    public void reservas() throws IOException {/*todo listar reservas do utilizador logado*/
-       ArrayList<String> rs = manager.getReservasVoos(user.getNome());
-       dos.writeInt(rs.size());
-       for(String s : rs){
-           dos.writeUTF(s);
-       }
+    public void reservas() throws IOException {
+        System.out.println("C"+idC+": getting reservas");
+        ArrayList<String> rs = manager.getReservasVoos(user.getNome());
+        dos.writeInt(rs.size());
+        for(String s : rs){
+            dos.writeUTF(s);
+        }
+        System.out.println("C"+idC+": mandando as reservas");
     }
 
     public void reserva() throws IOException {
-        if(logged) {
-            String[] viagem = dis.readUTF().split(";");
-            String[] datas = dis.readUTF().split(";");
-            boolean valido = true;
-            List<Integer> idsVoos = new ArrayList<>();
-            List<LocalDate> datasVoos = new ArrayList<>();
-            //verifica se é valida a viagem que o utilizador quer
-            if (viagem.length >= 2) {
-                for (int i = 0; i < viagem.length - 1 && valido; i++) {
-                    int id;
-                    if ((id = manager.existsVoo(viagem[i], viagem[i + 1])) != -1) {
-                        idsVoos.add(id);
-                    } else {
-                        valido = false;
-                    }
-
-                    for(String d : datas){
-                        datasVoos.add(LocalDate.parse(d));
-                    }
-                }
-                //neste momento está a escolher a primeira data possivel
-                if(valido){
-                    if(manager.updateReservas(new Reserva(idsVoos,datasVoos.get(0),user.getNome()))){
-                          dos.writeUTF("Viagem reservada com sucesso.");
-                    }else{
-                        dos.writeUTF("Lotação esgotada");
-                    }
-
-                }else{
-                    dos.writeUTF("Não foi possivel concluir reserva");
-                }
-            }
+        System.out.println("C"+idC+": começando a reserva");
+        String[] viagem = dis.readUTF().split(";");
+        String[] datas = dis.readUTF().split(";");
+        Reserva nova = manager.createReserva(user.getNome(),viagem,datas);
+        if (nova != null) {
+            System.out.println("C"+idC+": reserva feita com sucesso");
+            manager.registoReservaCsv(nova);
+            System.out.println("C"+idC+": mandando o booleano e o codigo");
+            dos.writeBoolean(true);
+            dos.writeInt(nova.getCodigo());
         }
+        else dos.writeBoolean(false);
+        System.out.println("C"+idC+": mandando o booleano");
     }
 
     public void cancela() throws IOException {
-         StringBuilder sb;
-         sb = new StringBuilder();
-         if(logged) {
-            int codReserva = dis.readInt();
-            if(manager.existeReserva(codReserva)){
-                Reserva r = manager.getReserva(codReserva);
-                if(r.getUtilizador().equals(user.getNome())){
-                      manager.removeReserva(codReserva);
-                }else{
-                    sb.append("Essa reserva não existe");
-                }
-
-            }else{
-                sb.append("Essa reserva não existe");
-             }
-            sb.append("Reserva ").append(codReserva).append(" cancelada");
-            dos.writeUTF(sb.toString());
-        }
+        System.out.println("C"+idC+": processando cancelamento");
+        boolean cancelada = false;
+        int codReserva = dis.readInt();
+        cancelada = manager.cancelaReserva(codReserva);
+        System.out.println("C"+idC+": mandando ao cliente o booleano");
+        dos.writeBoolean(cancelada);
     }
 
-    public void encerra(){/*todo admin encerrar dia*/}
+    public void encerra() throws IOException {
+        System.out.println("C"+idC+": encerrando dia...");
+        boolean encerrado = false;
+        try{
+            LocalDate data = LocalDate.parse(dis.readUTF());
+            encerrado = manager.encerraDia(data);
+            System.out.println("C"+idC+": dia encerrado com sucesso.");
+        }
+        catch (DateTimeParseException ignored){}
+        System.out.println("C"+idC+": mandando o booleano");
+        dos.writeBoolean(encerrado);
+        dos.flush();
+    }
 
     public void addvoo() throws IOException {
-        int id = -1;
-        if(logged && user.isAdmin()) {
-            boolean validoOD = true;
-            boolean validoC = true;
-            String origem = dis.readUTF();
-            String destino = dis.readUTF();
-            int cap = dis.readInt();
-            if (origem.equals(destino)) {
-                validoOD = false;
-            }
-            if (cap < 100 || cap > 250) {
-                validoC = false;
-            }
-            if (validoC && validoOD) {
-                id = manager.updateVoos(new Voo(-1,origem, destino, cap,0));
-                if(id != -1) {
-                    manager.registoVooCsv(id,origem,destino,cap);
-                }
-            }
-        dos.writeInt(id);
-        dos.flush();
+        System.out.println("C"+idC+": adicionando voo...");
+        boolean adicionado = false;
+        String origem = dis.readUTF();
+        String destino = dis.readUTF();
+        int cap = dis.readInt();
+        Voo novo = manager.updateVoos(new Voo(null,origem, destino, cap,0));
+        if(novo.getId() != null) {
+            System.out.println("C"+idC+": voo adicionado com sucesso.");
+            manager.registoVooCsv(novo);
+            adicionado = true;
         }
+        System.out.println("C"+idC+": mandando o booleano");
+        dos.writeBoolean(adicionado);
+        dos.flush();
     }
 
     public void run() {
             try{
                 boolean finish = false;
+                System.out.println("C"+idC+": Establecendo conexão.");
                 while(!finish) {
                     int opcode = dis.readInt();
-                    System.out.println("opcode recebido do cliente "+idC+": "+opcode);
+                    System.out.println("C"+idC+": recebido opcode ["+opcode+"].");
                     switch (opcode){
-                        case 0 -> finish =  quit();
+                        case 0 -> finish = quit();
                         case 1 -> registo();
                         case 2 -> login();
                         case 3 -> logout();
@@ -434,6 +613,7 @@ class Handler implements Runnable {
                         default -> {}
                     }
                 }
+                System.out.println("C"+idC+": Conexão terminada.");
             }
             catch(IOException e){
                 e.printStackTrace();
@@ -446,7 +626,7 @@ public class Server{
     public static void main (String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(12345);
         VoosManager manager = new VoosManager("../ProjetoSD/cp/utilizadores.csv",
-                                                "../ProjetoSD/cp/voos.csv","../ProjetoSD/cp/registos.csv");//os ficheiros de persistencia são passados na criação do manager
+                                                "../ProjetoSD/cp/voos.csv","../ProjetoSD/cp/reservas.csv","../ProjetoSD/cp/datasEncerradas.csv");//os ficheiros de persistencia são passados na criação do manager
         manager.load();
         int i = 0;
 

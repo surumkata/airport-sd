@@ -1,10 +1,13 @@
 import java.io.*;
 import java.net.Socket;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 public class Cliente {
 
     private static boolean logged = false;
     private static boolean admin = false;
+    private static LocalDate dataArranque = LocalDate.now();
 
     public static class Sender{
         private DataOutputStream dos;
@@ -69,10 +72,10 @@ public class Cliente {
             }
         }
 
-        public void sendCancela(String numRegisto) {
+        public void sendCancela(int numRegisto) {
             try{
                 this.dos.writeInt(7); //cancela
-                dos.writeInt(Integer.parseInt(numRegisto));
+                dos.writeInt(numRegisto);
                 dos.flush();
             }
             catch (IOException e){
@@ -83,8 +86,6 @@ public class Cliente {
         public void sendReservas() {
             try{
                 this.dos.writeInt(5); //reservas
-                //todo: o cliente poder ver as suas reservas
-                //como estará previamente logado aqui é enviado o nome do mesmo
                 dos.flush();
             }
             catch (IOException e){
@@ -129,11 +130,10 @@ public class Cliente {
         }
 
         public void sendEncerra(String dia) {
-            //todo: encerra dia (admin)
             try{
                 this.dos.writeInt(8);
+                this.dos.writeUTF(dia);
                 this.dos.flush();
-                dos.flush();
             }
             catch (IOException e){
                 e.printStackTrace();
@@ -158,11 +158,18 @@ public class Cliente {
             }
         }
 
-        public void receiveReservas() throws IOException {
-            int size = dis.readInt();
-            for(int i=0;i<size;i++){
-                System.out.println(dis.readUTF());
+        public void receiveReservas() {
+            try{
+                int size = dis.readInt();
+                for(int i=0;i<size;i++){
+                    System.out.println(dis.readUTF());
+                }
             }
+            catch(IOException e){
+                e.printStackTrace();
+            }
+
+
         }
 
         public void receiveMessage(){
@@ -220,6 +227,16 @@ public class Cliente {
             }
             return id;
         }
+
+        public int receiveInt() {
+            try{
+                return dis.readInt();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+            return -1;
+        }
     }
 
     private  boolean commands(DataInputStream dis, DataOutputStream dos) throws IOException {
@@ -252,23 +269,66 @@ public class Cliente {
                     receiver.receiveReservas();
                 }
                 case "3" -> {
-                    System.out.println("Escreva o percuso de toda a vigem. ex: origem;destino1;destino2");
-                    String viagens = stdin.readLine();
+                    System.out.println("Escreva toda a viagem. ex: origem;escala1;escala2;destino");
+                    String viagem = stdin.readLine();
+                    boolean valido = false;
+                    while(!valido){
+                        valido = true;
+                        String[] ponto = viagem.split(";");
+                        if(ponto.length < 2) valido = false;
+                        for(int i = 0; i < ponto.length-1 && valido; i++){
+                            for(int j = i+1; j < ponto.length && valido; j++){
+                                if(ponto[i].equals(ponto[j])) valido = false;
+                            }
+                        }
+                        if(!valido) System.out.println("Erro. Escreva a viagem novamente por favor!");
+                    }
                     System.out.println("Escreva as datas que tem desponiblidade. ex: data1;data2;data3");
-                    String datas = stdin.readLine(); //todo: devia validar ja as datas aqui antes de chatear o server
-                    sender.sendReserva(viagens, datas);
-                    receiver.receiveMessage();
+                    valido = false;
+                    String datas = null;
+                    while(!valido) {
+                        valido = true;
+                        datas = stdin.readLine();
+                        String[] data = datas.split(";");
+                        for(int i = 0; i < data.length && valido; i++){
+                            try{
+                                LocalDate ld = LocalDate.parse(data[i]);
+                                if(ld.isBefore(dataArranque)) valido = false;
+                            }
+                            catch (DateTimeParseException ignored){
+                                valido = false;
+                            }
+                        }
+                        if(!valido) System.out.println("Erro. Escreva as datas novamente por favor!");
+                    }
+                    sender.sendReserva(viagem, datas);
+                    int cod;
+                    if(receiver.receiveBoolean() && (cod = receiver.receiveInt())!=-1){
+                        System.out.println("Reserva feita com sucesso com o codigo de registo: "+cod);
+                    }
+                    else System.out.println("Erro ao fazer a reserva, provavelmente voos inexistentes ou lotação excedida.\n");
                 }
                 case "4" -> {
-                    System.out.print("Escreva o id da reserva que pretende cancelar: ");
-                    String id = stdin.readLine();
-                    sender.sendCancela(id);
-                    System.out.println(dis.readUTF());
+                    System.out.print("Escreva o codigo da reserva que pretende cancelar: ");
+                    boolean valido = false;
+                    int codigo = -1;
+                    while(!valido){
+                        try{
+                            codigo = Integer.parseInt(stdin.readLine());
+                            valido = true;
+                        }
+                        catch (NumberFormatException ignored){}
+                    }
+                    sender.sendCancela(codigo);
+                    if(receiver.receiveBoolean()){
+                        System.out.println("Reserva cancelada com sucesso com o codigo de registo.\n");
+                    }
+                    else System.out.println("Erro ao cancelar a reserva, provavelmente código errado.\n");
                 }
                 case "5" -> {
                     sender.sendLogout();
                     logged = false;
-                    receiver.receiveMessage();
+                    System.out.println("Você foi deslogado!\n");
                 }
                 case "6" -> {
                     sender.sendQuit();
@@ -282,8 +342,8 @@ public class Cliente {
             sb.append("VooManager\n");
             sb.append("1) Ver voos.\n");
             sb.append("2) Registar novo admin\n");
-            sb.append("3) Adicionar voo\n");
-            sb.append("4) Encerrar dia\n");
+            sb.append("3) Encerrar dia\n");
+            sb.append("4) Adicionar voo\n");
             sb.append("5) Logout\n");
             sb.append("6) Sair\n");
             sb.append("\n");
@@ -304,18 +364,36 @@ public class Cliente {
                     receiver.receiveRegistoA();
                 }
                 case "3" -> {
-                    System.out.println("Escreva o percuso de toda a vigem. ex: origem;destino1;destino2:");
-                    String viagens = stdin.readLine();
-                    System.out.println("Escreva as datas que tem desponiblidade. ex: data1;data2;data3:");
-                    String datas = stdin.readLine(); //todo: devia validar ja as datas aqui antes de chatear o server
-                    sender.sendReserva(viagens, datas);
-                    receiver.receiveMessage();
+                    System.out.println("Escreva o dia a encerrar. ex: "+dataArranque.toString());
+                    boolean valido = false;
+                    LocalDate dia = null;
+                    while(!valido){
+                        try{
+                            dia = LocalDate.parse(stdin.readLine());
+                            if(dia.equals(dataArranque) || dia.isAfter(dataArranque))
+                                valido = true;
+                            else{
+                                System.out.println("Inseriu um dia inválido, por favor insira novamente.");
+                            }
+                        }
+                        catch(DateTimeParseException ignored){
+                            System.out.println("Inseriu um dia inválido, por favor insira novamente.");
+                        }
+                    }
+                    sender.sendEncerra(dia.toString());
+                    if(receiver.receiveBoolean()) System.out.println("Dia encerrado com sucesso!");
+                    else System.out.println("Erro ao encerrar dia, provavelmente dia já encerrado antes.");
                 }
                 case "4" -> {
                     System.out.println("Insira a origem do voo: ");
                     String origem = stdin.readLine();
                     System.out.println("Insira o destino do voo: ");
                     String destino = stdin.readLine();
+                    while(origem.equals(destino)){
+                        System.out.println("O destino não pode ser igual à origem! Por favor insira novamente.");
+                        System.out.println("Insira o destino do voo: ");
+                        destino = stdin.readLine();
+                    }
                     System.out.println("Insira a capacidade [de 100 a 250] do voo: ");
                     boolean valido = false;
                     int cap = 0;
@@ -330,9 +408,8 @@ public class Cliente {
                         if(!valido) System.out.println("Erro: capacidade inválida, insira novamente.\n");
                     }
                     sender.sendAddVoo(origem,destino,cap);
-                    int id;
-                    if((id = receiver.receiveAddVoo()) != -1){
-                        System.out.println("Adicionado voo com sucesso. Id do Voo: "+id+".\n");
+                    if(receiver.receiveBoolean()){
+                        System.out.println("Adicionado voo com sucesso!\n");
                     }
                     else System.out.println("Erro ao adicionar voo!\n");
                 }
@@ -340,7 +417,7 @@ public class Cliente {
                     sender.sendLogout();
                     logged = false;
                     admin = false;
-                    receiver.receiveMessage();
+                    System.out.println("Você foi deslogado!\n");
                 }
                 case "6" -> {
                     sender.sendQuit();

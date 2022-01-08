@@ -3,19 +3,27 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 public class Voo {
-    private int id;
+    private String id;
     private final String origem;
     private final String destino;
     private final int capacidade;
     private int lotacao;
 
 
-    public Voo(int id, String origem,String destino,int capacidade,int lotacao){
+    public Voo(String id, String origem,String destino,int capacidade,int lotacao){
         this.id = id;
         this.origem = origem;
         this.destino = destino;
         this.capacidade = capacidade;
         this.lotacao = lotacao;
+    }
+
+    public Voo(Voo v) {
+        this.id = v.id;
+        this.origem = v.origem;
+        this.destino = v.destino;
+        this.capacidade = v.capacidade;
+        this.lotacao = v.lotacao;
     }
 
     public void addPassageiro(){
@@ -24,15 +32,21 @@ public class Voo {
         }
     }
 
+    public void removePassageiro(){
+        if(lotacao > 0){
+            lotacao--;
+        }
+    }
+
     public int getLotacao() {
         return lotacao;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(int id){this.id = id;}
+    public void setId(String id){this.id = id;}
 
     public int getCapacidade() {
         return capacidade;
@@ -51,7 +65,7 @@ public class Voo {
     }
 
     public void serialize(DataOutputStream out) throws IOException {
-        out.writeInt(this.id);
+        out.writeUTF(this.id);
         out.writeUTF(this.origem);
         out.writeUTF(this.destino);
         out.writeInt(this.capacidade);
@@ -59,7 +73,7 @@ public class Voo {
     }
 
     public static Voo deserialize(DataInputStream in) throws IOException {
-        int id = in.readInt();
+        String id = in.readUTF();
         String origem = in.readUTF();
         String destino = in.readUTF();
         int capacidade = in.readInt();
@@ -74,8 +88,8 @@ public class Voo {
         sb.append(this.origem).append("->").append(this.destino).append(" [").append(lotacao).append("/").append(capacidade).append("]");
         return sb.toString();
     }
-/*
+
     public Voo clone(){
-        return new Voo(this.id,this.origem,this.destino,this.capacidade);
-    }*/
+        return new Voo(this);
+    }
 }
