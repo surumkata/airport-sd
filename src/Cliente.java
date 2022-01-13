@@ -158,18 +158,14 @@ public class Cliente {
             }
         }
 
-        public void receiveReservas() {
+        public void receiveReservas(){
             try{
-                int size = dis.readInt();
-                for(int i=0;i<size;i++){
-                    System.out.println(dis.readUTF());
-                }
+                ReservasList reservas = ReservasList.deserialize(dis);
+                System.out.println(reservas);
             }
-            catch(IOException e){
+            catch (IOException e){
                 e.printStackTrace();
             }
-
-
         }
 
         public void receiveMessage(){

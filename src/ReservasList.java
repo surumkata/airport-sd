@@ -3,18 +3,18 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
-class VoosList extends ArrayList<Voo> {
+class ReservasList extends ArrayList<Reserva> {
 
     public void serialize (DataOutputStream out) throws IOException {
         out.writeInt(this.size());
-        for(Voo i : this)
-            i.serialize(out);
+        for(Reserva r : this)
+            r.serialize(out);
     }
-    public static VoosList deserialize (DataInputStream in) throws IOException {
-        VoosList cl = new VoosList();
+    public static ReservasList deserialize (DataInputStream in) throws IOException {
+        ReservasList cl = new ReservasList();
         int size = in.readInt();
         for(int i = 0; i < size; i++){
-            cl.add(Voo.deserialize(in));
+            cl.add(Reserva.deserialize(in));
         }
         return cl;
     }
@@ -22,9 +22,9 @@ class VoosList extends ArrayList<Voo> {
     public String toString(){
         StringBuilder sb;
         sb = new StringBuilder();
-        sb.append("*** Voos ***\n");
-        for(Voo i : this){
-            sb.append(i).append("\n");
+        sb.append("*** Reservas ***\n");
+        for(Reserva r : this){
+            sb.append(r).append("\n");
         }
         return sb.toString();
     }

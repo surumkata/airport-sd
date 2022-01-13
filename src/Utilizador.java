@@ -17,7 +17,6 @@ public class Utilizador {
         return password;
     }
 
-
     public boolean isAdmin() {
         return adminPermission;
     }
