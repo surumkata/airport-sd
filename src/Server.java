@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -88,6 +89,11 @@ class VoosManager {
                     voos.get(id).addPassageiro(data);
                 }
                 reservasLock.writeLock().lock();
+                try{
+                    Thread.sleep(10000);
+                }catch (InterruptedException e){
+                    e.printStackTrace();
+                }
                 datasLock.readLock().unlock();
                 voosLock.writeLock().unlock();
                 this.lastidReserva++;
@@ -423,17 +429,17 @@ class VoosManager {
     public boolean encerraDia(LocalDate data) {
         try {
             datasLock.writeLock().lock();
-            if (!datasEncerradas.contains(data) && (data.isAfter(dataArranque) || data.equals(dataArranque))) {
+            if (!datasEncerradas.contains(data) && (!data.isBefore(dataArranque))) {
                 datasEncerradas.add(data);
                 registoDataEncerrada(data);
                 return true;
             } else return false;
         } catch (IOException e) {
             e.printStackTrace();
+            return false;
         } finally {
             datasLock.writeLock().unlock();
         }
-        return false;
     }
 
     public boolean cancelaReserva(int codReserva) {
@@ -636,6 +642,9 @@ class Handler implements Runnable {
                     }
                 }
                 System.out.println("C"+idC+": Conexão terminada.");
+            }
+            catch(SocketException se){
+                System.out.println("\u001B[31mC"+idC+": Conexão terminada abruptamente!\u001B[0m");
             }
             catch(IOException e){
                 e.printStackTrace();

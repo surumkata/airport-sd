@@ -239,7 +239,7 @@ public class Cliente {
                             viagem = stdin.readLine();
                         }
                     }
-                    System.out.println("Escreva as datas que tem desponiblidade. ex: data1;data2;data3");
+                    System.out.println("Escreva as datas que tem disponibilidade. ex: data1;data2;data3");
                     valido = false;
                     String datas = null;
                     while(!valido) {
@@ -279,7 +279,7 @@ public class Cliente {
                     if(receiver.receiveBoolean()){
                         System.out.println("Reserva cancelada com sucesso com o codigo de registo.\n");
                     }
-                    else System.out.println("Erro ao cancelar a reserva, provavelmente código errado.\n");
+                    else System.out.println("Erro ao cancelar a reserva! Causa provável: código errado.\n");
                 }
                 case "5" -> {
                     sender.sendLogout();
