@@ -168,14 +168,6 @@ public class Cliente {
             }
         }
 
-        public void receiveMessage(){
-            try{
-                System.out.println(dis.readUTF());
-            }
-            catch(IOException e){
-                e.printStackTrace();
-            }
-        }
 
         public boolean receiveBoolean(){
             try{
@@ -187,42 +179,7 @@ public class Cliente {
             return false;
         }
 
-        public void receiveRegisto() {
-            try{
-                if(dis.readBoolean()){
-                    System.out.println("Registado novo utilizador com sucesso!\n");
-                }
-                else
-                    System.out.println("Erro ao registar novo utilizador. Experimente outro nome de utilizador.\n");
-            }
-            catch(IOException e){
-                e.printStackTrace();
-            }
-        }
 
-        public void receiveRegistoA() {
-            try{
-                boolean registado = dis.readBoolean();
-                if(registado)
-                    System.out.println("Registado novo admin com sucesso!\n");
-                else
-                    System.out.println("Erro ao registar novo admin. Experimente outro nome de utilizador.\n");
-            }
-            catch(IOException e){
-                e.printStackTrace();
-            }
-        }
-
-        public int receiveAddVoo() {
-            int id = -1;
-            try{
-                id = dis.readInt();
-            }
-            catch(IOException e){
-                e.printStackTrace();
-            }
-            return id;
-        }
 
         public int receiveInt() {
             try{
@@ -360,7 +317,10 @@ public class Cliente {
                     System.out.print("Escreva a password: ");
                     String password = stdin.readLine();
                     sender.sendRegisto(nome, password, true);
-                    receiver.receiveRegistoA();
+                    if(receiver.receiveBoolean()){
+                        System.out.println("Registado novo admin com sucesso!\n");
+                    }else
+                        System.out.println("Erro ao registar novo admin. Experimente outro nome de utilizador.\n");
                 }
                 case "3" -> {
                     System.out.println("Escreva o dia a encerrar. ex: "+dataArranque.toString());
@@ -472,7 +432,10 @@ public class Cliente {
             String password = stdin.readLine();
             if(option.equals("1")){
                 sender.sendRegisto(nome,password,false);
-                receiver.receiveRegisto();
+                if(receiver.receiveBoolean()){
+                    System.out.println("Registado novo admin com sucesso!\n");
+                }else
+                    System.out.println("Erro ao registar novo admin. Experimente outro nome de utilizador.\n");
             }
             else{
                 sender.sendLogin(nome,password);
