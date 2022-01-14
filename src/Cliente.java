@@ -277,7 +277,10 @@ public class Cliente {
                                 if(ponto[i].equals(ponto[j])) valido = false;
                             }
                         }
-                        if(!valido) System.out.println("Erro. Escreva a viagem novamente por favor!");
+                        if(!valido) {
+                            System.out.println("Erro. Escreva a viagem novamente por favor!");
+                            viagem = stdin.readLine();
+                        }
                     }
                     System.out.println("Escreva as datas que tem desponiblidade. ex: data1;data2;data3");
                     valido = false;

@@ -488,7 +488,7 @@ class Handler implements Runnable {
         dis.close();
         dos.close();
         socket.close();
-        System.out.println("C"+idC+"fechando a socket");
+        System.out.println("C"+idC+": fechando a socket");
         return true;
     }
 

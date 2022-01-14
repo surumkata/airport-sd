@@ -2,22 +2,22 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="2fa06b62-c16a-49ae-8c57-6c968198a03d" name="Changes" comment="listar reservas do utilizador (tem um bug)">
-      <change afterPath="$PROJECT_DIR$/src/ReservasList.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/csv-plugin.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/csv-plugin.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/runConfigurations.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/uiDesigner.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/uiDesigner.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cp/datasEncerradas.csv" beforeDir="false" afterPath="$PROJECT_DIR$/cp/datasEncerradas.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ProjetoSD.iml" beforeDir="false" afterPath="$PROJECT_DIR$/ProjetoSD.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cp/reservas.csv" beforeDir="false" afterPath="$PROJECT_DIR$/cp/reservas.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cp/utilizadores.csv" beforeDir="false" afterPath="$PROJECT_DIR$/cp/utilizadores.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cp/voos.csv" beforeDir="false" afterPath="$PROJECT_DIR$/cp/voos.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente$Receiver.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente$Receiver.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Cliente.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Handler.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Handler.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Reserva.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Reserva.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Server.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Server.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Utilizador.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Utilizador.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/Voo.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/Voo.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/VoosList.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/VoosList.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/ProjetoSD/VoosManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/ProjetoSD/VoosManager.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Cliente.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Cliente.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Reserva.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Reserva.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ReservasList.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/ReservasList.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Server.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Utilizador.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Utilizador.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Voo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Voo.java" afterDir="false" />
@@ -46,6 +46,9 @@
       <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
     </file-type-list>
   </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
   <component name="ProjectId" id="239D3rmM0as5AKHytL6o08YnETh" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -55,7 +58,8 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../aula7" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.0" />
     <property name="project.structure.side.proportion" value="0.0" />
@@ -93,6 +97,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1641137216575</updated>
+      <workItem from="1642198378480" duration="1818000" />
     </task>
     <task id="LOCAL-00001" summary="começo da magia de verdade">
       <created>1641146315531</created>
@@ -132,6 +137,9 @@
     <option name="localTasksCounter" value="6" />
     <servers />
   </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
       <map>
@@ -142,7 +150,6 @@
         </entry>
       </map>
     </option>
-    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="começo da magia de verdade" />
