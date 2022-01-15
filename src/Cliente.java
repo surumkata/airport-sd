@@ -23,11 +23,11 @@ public class Cliente {
         //encerra -> 8
         //addvoo -> 9
 
-        public Sender(DataOutputStream dos){
+        private Sender(DataOutputStream dos){
             this.dos = dos;
         }
 
-        public void sendVoos(){
+        private void sendVoos(){
             try{
                 this.dos.writeInt(4); //voos
                 this.dos.flush();
@@ -37,7 +37,7 @@ public class Cliente {
             }
         }
 
-        public void sendLogin(String nome, String password){
+        private void sendLogin(String nome, String password){
             try{
                 this.dos.writeInt(2); //login
                 this.dos.writeUTF(nome);
@@ -49,7 +49,7 @@ public class Cliente {
             }
         }
 
-        public void sendLogout(){
+        private void sendLogout(){
             try{
                 this.dos.writeInt(3); //logout
                 this.dos.flush();
@@ -59,7 +59,7 @@ public class Cliente {
             }
         }
 
-        public void sendRegisto(String nome, String password, boolean admin) {
+        private void sendRegisto(String nome, String password, boolean admin) {
             try{
                 this.dos.writeInt(1); //registo
                 this.dos.writeBoolean(admin);
@@ -72,7 +72,7 @@ public class Cliente {
             }
         }
 
-        public void sendCancela(int numRegisto) {
+        private void sendCancela(int numRegisto) {
             try{
                 this.dos.writeInt(7); //cancela
                 dos.writeInt(numRegisto);
@@ -83,7 +83,7 @@ public class Cliente {
             }
         }
 
-        public void sendReservas() {
+        private void sendReservas() {
             try{
                 this.dos.writeInt(5); //reservas
                 dos.flush();
@@ -93,7 +93,7 @@ public class Cliente {
             }
         }
 
-        public void sendQuit() {
+        private void sendQuit() {
             try {
                 this.dos.writeInt(0); //quit
                 dos.flush();
@@ -103,9 +103,8 @@ public class Cliente {
             }
         }
 
-        public void sendReserva(String viagem, String datas) {
+        private void sendReserva(String viagem, String datas) {
             try{
-                //todo: reserva cidades(separadas ;) = token[1] datas(separadas ;) = token[2]
                 this.dos.writeInt(6); //reserva
                 dos.writeUTF(viagem);
                 dos.writeUTF(datas);
@@ -116,7 +115,7 @@ public class Cliente {
             }
         }
 
-        public void sendAddVoo(String origem, String destino, int capacidade) {
+        private void sendAddVoo(String origem, String destino, int capacidade) {
             try{
                 this.dos.writeInt(9); //advoo
                 dos.writeUTF(origem);
@@ -129,7 +128,7 @@ public class Cliente {
             }
         }
 
-        public void sendEncerra(String dia) {
+        private void sendEncerra(String dia) {
             try{
                 this.dos.writeInt(8);
                 this.dos.writeUTF(dia);
@@ -141,14 +140,14 @@ public class Cliente {
         }
     }
 
-    public static class Receiver{
+    private static class Receiver{
         private DataInputStream dis;
 
-        public Receiver(DataInputStream dis){
+        private Receiver(DataInputStream dis){
             this.dis = dis;
         }
 
-        public void receiveVoos(){
+        private void receiveVoos(){
             try{
                 VoosList voos = VoosList.deserialize(dis);
                 System.out.println(voos);
@@ -158,7 +157,7 @@ public class Cliente {
             }
         }
 
-        public void receiveReservas(){
+        private void receiveReservas(){
             try{
                 ReservasList reservas = ReservasList.deserialize(dis);
                 System.out.println(reservas);
@@ -169,7 +168,7 @@ public class Cliente {
         }
 
 
-        public boolean receiveBoolean(){
+        private boolean receiveBoolean(){
             try{
                 return dis.readBoolean();
             }
@@ -179,9 +178,7 @@ public class Cliente {
             return false;
         }
 
-
-
-        public int receiveInt() {
+        private int receiveInt() {
             try{
                 return dis.readInt();
             }
@@ -388,6 +385,9 @@ public class Cliente {
     }
 
 
+    /**
+     * Função main do cliente.
+     */
     public static void main (String[] args) throws IOException {
         Socket socket = new Socket("localhost", 12345);
         DataInputStream dis = new DataInputStream(socket.getInputStream());

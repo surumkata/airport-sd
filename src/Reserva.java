@@ -85,7 +85,7 @@ public class Reserva {
         sb.append("}");
         return sb.toString();
     }
-
+    
     public Reserva clone(){
         return new Reserva(this.origem,this.destino,this.codigo,this.viagem,this.data,this.utilizador);
     }

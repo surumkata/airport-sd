@@ -5,31 +5,37 @@ import java.net.SocketException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-
 class VoosManager {
-    private HashMap<String,Utilizador> users;
-    private HashMap<Integer,Reserva> reservas;
-    private HashMap<String,Voo> voos;
-    private ReadWriteLock userslock = new ReentrantReadWriteLock();
-    private ReadWriteLock reservasLock = new ReentrantReadWriteLock();
-    private ReadWriteLock voosLock = new ReentrantReadWriteLock();
-    private ReentrantLock [] fileLock = new ReentrantLock[4];
-    private String utilizadoresCsv; //[0]
-    private String voosCsv; //[1]
-    private String reservasCsv; //[2]
-    private String datasEncerradasCsv; //[3]
-    private int lastidReserva;
-    private LocalDate dataArranque  = LocalDate.now();
-    private List<LocalDate> datasEncerradas;
-    private ReadWriteLock datasLock = new ReentrantReadWriteLock();
+    private HashMap<String,Utilizador> users; //map dos users; chave é o nome do user
+    private HashMap<Integer,Reserva> reservas; //map das reservas; chave é o codigo da reserva
+    private HashMap<String,Voo> voos; //map dos voos; chave é o id do voo
+    private ReadWriteLock userslock = new ReentrantReadWriteLock();//lock do map dos users
+    private ReadWriteLock reservasLock = new ReentrantReadWriteLock();//lock do map das reservas
+    private ReadWriteLock voosLock = new ReentrantReadWriteLock();//lock do map dos voos
+    private ReentrantLock [] fileLock = new ReentrantLock[4]; //lock dos ficheiros
+    private String utilizadoresCsv; //[0] //nome do ficheiro dos users
+    private String voosCsv; //[1] //nome do ficheiro dos voos
+    private String reservasCsv; //[2] //nome do ficheiro das reservas
+    private String datasEncerradasCsv; //[3] //nome do ficheiro das datas encerradas
+    private int lastidReserva; //ultimo codigo de reserva
+    private LocalDate dataArranque  = LocalDate.now(); // data de arranque do manager
+    private List<LocalDate> datasEncerradas; //lista de datas encerras (nenhuma pré data de arranque)
+    private ReadWriteLock datasLock = new ReentrantReadWriteLock(); //lock da lista de datas encerradas
 
+
+    /**
+     * Construtor do VoosManager
+     * @param utilizadoresCsv nome do ficheiro dos utilizadores.
+     * @param voosCsv nome do ficheiro dos voos.
+     * @param reservasCsv nome do ficheiro das reservas.
+     * @param datasEncerradasCsv nome do ficheiro das datas encerradas.
+     */
     public VoosManager(String utilizadoresCsv, String voosCsv, String reservasCsv,String datasEncerradasCsv) {
         users = new HashMap<>();
         reservas = new HashMap<>();
@@ -45,6 +51,11 @@ class VoosManager {
         }
     }
 
+    /**
+     * Adiciona um utilizador ao manager.
+     * @param u utilizador a ser adicionado.
+     * @return true se for bem adicionado, false caso contrário.
+     */
     public boolean updateUtilizadores(Utilizador u) {
         boolean added = false;
         userslock.writeLock().lock();
@@ -56,6 +67,13 @@ class VoosManager {
         return added;
     }
 
+    /**
+     * Adiciona uma reserva ao manager.
+     * @param user nome do utilizador.
+     * @param pontos lista de pontos por onde a viagem vai ocorrer.
+     * @param datas lista de datas (escolhe a primeira válida).
+     * @return Reserva adicionado. null caso aja insucesso.
+     */
     public Reserva createReserva(String user, String[] pontos, String[] datas){
         Reserva nova = null;
         LocalDate data = null;
@@ -130,6 +148,11 @@ class VoosManager {
         }
     }
 
+    /**
+     * Adiciona um voo ao manager.
+     * @param v voo.
+     * @return Voo adicionado (id é mudado).
+     */
     public Voo updateVoos(Voo v){
         Voo novo = v.clone();
         String origemedestino = novo.getOrigem()+novo.getDestino();
@@ -146,6 +169,11 @@ class VoosManager {
         return novo;
     }
 
+    /**
+     * Verifica se um voo existe.
+     * @param id id do voo.
+     * @return true se voo existir, false caso contrário.
+     */
     public boolean existsVoo(String id){
         try{
             voosLock.readLock().lock();
@@ -156,6 +184,11 @@ class VoosManager {
         }
     }
 
+    /**
+     * Verifica se um utilizador existe.
+     * @param name nome do utilizador.
+     * @return true se utilizador existir, false caso contrário.
+     */
     public boolean existeUtilizador(String name){
         try{
             userslock.readLock().lock();
@@ -166,6 +199,10 @@ class VoosManager {
         }
     }
 
+    /**
+     * Get da lista de voos.
+     * @return retorna a lista de todos as voos.
+     */
     public VoosList getVoos () {
         try{
             voosLock.readLock().lock();
@@ -178,12 +215,17 @@ class VoosManager {
         }
     }
 
-    public ReservasList getReservas (String utilizador) {
+    /**
+     * Get da lista de reservas de um utilizador.
+     * @param nome nome do utilizador.
+     * @return retorna a lista de todas as reservas de um utilizador.
+     */
+    public ReservasList getReservas (String nome) {
         try{
             reservasLock.readLock().lock();
             ReservasList ret = new ReservasList();
             for(Reserva r : reservas.values()){
-                if(r.getUtilizador().equals(utilizador))
+                if(r.getUtilizador().equals(nome))
                     ret.add(r);
             }
             return ret;
@@ -193,6 +235,11 @@ class VoosManager {
         }
     }
 
+    /**
+     * Get de um utilizador pelo nome.
+     * @param nome nome do utilizador
+     * @return retorna o utilizador referente ao nome.
+     */
     public Utilizador getUtilizador(String nome) {
         try{
             userslock.readLock().lock();
@@ -203,6 +250,10 @@ class VoosManager {
         }
     }
 
+    /**
+     * Regista um utilizador no CSV
+     * @param u utilizador a ser registada
+     */
     public void registoUtilizadorCsv(Utilizador u) throws IOException {
         try{
             fileLock[0].lock();
@@ -218,6 +269,10 @@ class VoosManager {
         }
     }
 
+    /**
+     * Regista um voo no CSV
+     * @param v voo a ser registada
+     */
     public void registoVooCsv(Voo v) throws IOException {
         try{
             fileLock[1].lock();
@@ -230,6 +285,10 @@ class VoosManager {
         }
     }
 
+    /**
+     * Regista um reserva no CSV
+     * @param r reserva a ser registada
+     */
     public void registoReservaCsv(Reserva r) throws IOException {
         try{
             fileLock[2].lock();
@@ -250,7 +309,8 @@ class VoosManager {
         }
     }
 
-    public void registoTodasReservasCsv() throws IOException {
+
+    private void registoTodasReservasCsv() throws IOException {
         try{
             fileLock[2].lock();
             BufferedWriter bw = new BufferedWriter(new FileWriter(this.reservasCsv,true));
@@ -273,6 +333,11 @@ class VoosManager {
         }
     }
 
+
+    /**
+     * Regista uma data no ficheiro CSV.
+     * @param data data a ser registada
+     */
     public void registoDataEncerrada(LocalDate data) throws IOException {
 
         try{
@@ -287,7 +352,7 @@ class VoosManager {
         }
     }
 
-    public void registoTodasDatasEncerradasCsv() throws IOException {
+    private void registoTodasDatasEncerradasCsv() throws IOException {
         try {
             fileLock[3].lock();
             BufferedWriter bw = new BufferedWriter(new FileWriter(this.datasEncerradasCsv));
@@ -301,7 +366,7 @@ class VoosManager {
         }
     }
 
-    public void loadUtilizadoresCsv() throws IOException {
+    private void loadUtilizadoresCsv() throws IOException {
         System.out.println("Lendo o ficheiro dos utilizadores...");
         BufferedReader br = new BufferedReader(new FileReader(this.utilizadoresCsv));
         String line;
@@ -329,7 +394,7 @@ class VoosManager {
 
     }
 
-    public void loadVoosCsv() throws IOException {
+    private void loadVoosCsv() throws IOException {
         System.out.println("Lendo o ficheiro de voos...");
         BufferedReader br = new BufferedReader(new FileReader(this.voosCsv));
         String line;
@@ -354,7 +419,7 @@ class VoosManager {
     }
 
 
-    public void loadReservasCsv() throws IOException {
+    private void loadReservasCsv() throws IOException {
         System.out.println("Lendo o ficheiro de reservas...");
         BufferedReader br = new BufferedReader(new FileReader(this.reservasCsv));
         String line;
@@ -395,7 +460,7 @@ class VoosManager {
         br.close();
     }
 
-    public void loadDatasEncerradasCsv() throws IOException {
+    private void loadDatasEncerradasCsv() throws IOException {
         System.out.println("Lendo o ficheiro de datas encerradas...");
         BufferedReader br = new BufferedReader(new FileReader(this.datasEncerradasCsv));
         String data;
@@ -415,6 +480,9 @@ class VoosManager {
         registoTodasDatasEncerradasCsv(); //para caso tenha lido datas invalidas, reescrever corretamente
     }
 
+    /**
+     * Carrega dos ficheiros as informações do manager.
+     */
     public void load() throws IOException {
         loadUtilizadoresCsv();
         loadVoosCsv();
@@ -422,6 +490,12 @@ class VoosManager {
         loadDatasEncerradasCsv();
     }
 
+    /**
+     * Verifica se as credenciais do utilizador estão corretos.
+     * @param nome nome do utilizador.
+     * @param password password do utilizador.
+     * @return true se estiverem corretas, false caso contrário.
+     */
     public boolean checkCredentials(String nome, String password) {
         try{
             userslock.readLock().lock();
@@ -432,6 +506,11 @@ class VoosManager {
         }
     }
 
+    /**
+     * Encerra um dia. (Passa a ser impossivel criar/cancelar reservas nesse dia).
+     * @param data data a ser encerrada
+     * @return true se o dia for encerrado com sucesso, false caso contrário.
+     */
     public boolean encerraDia(LocalDate data) {
         try {
             datasLock.writeLock().lock();
@@ -448,34 +527,41 @@ class VoosManager {
         }
     }
 
-    public boolean cancelaReserva(int codReserva) {
+    /**
+     * Cancela a reserva de um determinado user
+     * @param codReserva codigo que identifica a reserva a ser cancelada
+     * @param user nome do utilizador da reserva.
+     * @return true se a reserva tiver sido cancelada com sucesso, false caso contrário.
+     */
+    public boolean cancelaReserva(int codReserva, String user) {
         boolean cancelada = false;
         reservasLock.writeLock().lock();
         if(reservas.containsKey(codReserva)) {
             Reserva r = reservas.get(codReserva);
-            LocalDate data = r.getData();
-            datasLock.readLock().lock();
-            if (!datasEncerradas.contains(data)) {
-                List<String> viagem = r.getViagem();
-                datasLock.readLock().unlock();
-                voosLock.writeLock().lock();
-                for (String id : viagem) {
-                    voos.get(id).removePassageiro(data);
+            if(r.getUtilizador().equals(user)){
+                LocalDate data = r.getData();
+                datasLock.readLock().lock();
+                if (!datasEncerradas.contains(data)) {
+                    List<String> viagem = r.getViagem();
+                    datasLock.readLock().unlock();
+                    voosLock.writeLock().lock();
+                    for (String id : viagem) {
+                        voos.get(id).removePassageiro(data);
+                    }
+                    voosLock.writeLock().unlock();
+                    reservas.remove(codReserva);
+                    try {
+                        registoTodasReservasCsv();
+                    } catch (IOException ignored) {
+                    }
+                    cancelada = true;
                 }
-                voosLock.writeLock().unlock();
-                reservas.remove(codReserva);
-                try {
-                    registoTodasReservasCsv();
-                } catch (IOException ignored) {
+                else {
+                    datasLock.readLock().unlock();
                 }
-                reservasLock.writeLock().unlock();
-                cancelada = true;
             }
-            else
-                datasLock.readLock().unlock();
         }
-        else
-            reservasLock.writeLock().unlock();
+        reservasLock.writeLock().unlock();
         return cancelada;
     }
 }
@@ -488,6 +574,12 @@ class Handler implements Runnable {
     private Utilizador user = null;
     private int idC;
 
+    /**
+     * Construtor do Handler.
+     * @param socket para conseguir establecer conexão com o cliente;
+     * @param manager para gerir os voos/reservas etc...
+     * @param idC para identificação estética (logs) do cliente conectado.
+     */
     public Handler (Socket socket, VoosManager manager, int idC){
         this.socket = socket;
         this.manager = manager;
@@ -501,7 +593,7 @@ class Handler implements Runnable {
         }
     }
 
-    public boolean quit() throws IOException {
+    private boolean quit() throws IOException {
         dis.close();
         dos.close();
         socket.close();
@@ -509,7 +601,7 @@ class Handler implements Runnable {
         return true;
     }
 
-    public void registo() throws IOException {
+    private void registo() throws IOException {
         boolean ret;
         boolean admin = dis.readBoolean();
         if(admin) {
@@ -537,12 +629,12 @@ class Handler implements Runnable {
         System.out.println("C"+idC+": mandando o booleano");
     }
 
-    public void logout() throws IOException {
+    private void logout() throws IOException {
         user = null;
         System.out.println("C"+idC+": logout");
     }
 
-    public void login() throws IOException {
+    private void login() throws IOException {
         System.out.println("C"+idC+": começando login");
         boolean admin = false;
         boolean logged = false;
@@ -561,21 +653,21 @@ class Handler implements Runnable {
         }
     }
 
-    public void voos() throws IOException {
+    private void voos() throws IOException {
         System.out.println("C"+idC+": getting voos");
         VoosList voos = manager.getVoos();
         voos.serialize(dos);
         System.out.println("C"+idC+": mandando os voos");
     }
 
-    public void reservas() throws IOException {
+    private void reservas() throws IOException {
         System.out.println("C"+idC+": getting reservas");
         ReservasList reservas = manager.getReservas(user.getNome());
         reservas.serialize(dos);
         System.out.println("C"+idC+": mandando as reservas");
     }
 
-    public void reserva() throws IOException {
+    private void reserva() throws IOException {
         System.out.println("C"+idC+": começando a reserva");
         String[] viagem = dis.readUTF().split(";");
         String[] datas = dis.readUTF().split(";");
@@ -591,16 +683,16 @@ class Handler implements Runnable {
         System.out.println("C"+idC+": mandando o booleano");
     }
 
-    public void cancela() throws IOException {
+    private void cancela() throws IOException {
         System.out.println("C"+idC+": processando cancelamento");
         boolean cancelada;
         int codReserva = dis.readInt();
-        cancelada = manager.cancelaReserva(codReserva);
+        cancelada = manager.cancelaReserva(codReserva, user.getNome());
         System.out.println("C"+idC+": mandando ao cliente o booleano");
         dos.writeBoolean(cancelada);
     }
 
-    public void encerra() throws IOException {
+    private void encerra() throws IOException {
         System.out.println("C"+idC+": encerrando dia...");
         boolean encerrado = false;
         try{
@@ -614,7 +706,7 @@ class Handler implements Runnable {
         dos.flush();
     }
 
-    public void addvoo() throws IOException {
+    private void addvoo() throws IOException {
         System.out.println("C"+idC+": adicionando voo...");
         boolean adicionado = false;
         String origem = dis.readUTF();
@@ -631,6 +723,10 @@ class Handler implements Runnable {
         dos.flush();
     }
 
+
+    /**
+     * Função run do handler, trata o pedido do cliente.
+     */
     public void run() {
             try{
                 boolean finish = false;
@@ -665,6 +761,10 @@ class Handler implements Runnable {
 
 public class Server{
 
+
+    /**
+     * Função main do server, fica à escuta por pedidos, e quando recebe inicializa um Handler que tratará do pedido.
+     */
     public static void main (String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(12345);
         System.out.println("Inicializando o servidor...");

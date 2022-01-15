@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
+
 public class Voo {
     private String id;
     private final String origem;
@@ -16,6 +17,14 @@ public class Voo {
     ReentrantLock lockLotacao = new ReentrantLock();
 
 
+    /**
+     * Construtor do voo.
+     * @param id id do voo.
+     * @param origem origem do voo.
+     * @param destino destino do voo.
+     * @param capacidade capacicade do voo.
+     * @param lotacoes map das lotacoes por datas do voo.
+     */
     public Voo(String id, String origem,String destino,int capacidade,Map<LocalDate,Integer> lotacoes){
         this.id = id;
         this.origem = origem;
@@ -24,6 +33,10 @@ public class Voo {
         this.lotacoes = new HashMap<>(lotacoes);
     }
 
+    /**
+     * Construtor clone do voo.
+     * @param v Voo
+     */
     public Voo(Voo v) {
         this.id = v.id;
         this.origem = v.origem;
@@ -32,6 +45,10 @@ public class Voo {
         this.lotacoes = new HashMap<>(v.lotacoes);
     }
 
+    /**
+     * Adiciona um passageiro ao voo.
+     * @param data data do voo.
+     */
     public void addPassageiro(LocalDate data){
         lockLotacao.lock();
         if(lotacoes.containsKey(data)){
@@ -44,6 +61,10 @@ public class Voo {
         lockLotacao.unlock();
     }
 
+    /**
+     * Remove um passageiro ao voo.
+     * @param data data do voo.
+     */
     public void removePassageiro(LocalDate data){
         lockLotacao.lock();
         if(lotacoes.containsKey(data)){
@@ -55,6 +76,11 @@ public class Voo {
         lockLotacao.unlock();
     }
 
+    /**
+     * Get da lotacao do voo.
+     * @param data data do voo.
+     * @return lotacao do voo.
+     */
     public int getLotacao(LocalDate data) {
         try{
             lockLotacao.lock();
@@ -67,24 +93,48 @@ public class Voo {
         }
     }
 
+    /**
+     * Get id do voo.
+     * @return id do voo.
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Set id do voo.
+     * @param id do voo.
+     */
     public void setId(String id){this.id = id;}
 
+    /**
+     * Get capacidade do voo.
+     * @return capacidade do voo.
+     */
     public int getCapacidade() {
         return capacidade;
     }
 
+    /**
+     * Get destino do voo.
+     * @return destino do voo.
+     */
     public String getDestino() {
         return destino;
     }
 
+    /**
+     * Get origem do voo.
+     * @return origem do voo.
+     */
     public String getOrigem() {
         return origem;
     }
 
+    /**
+     * Serialize do voo.
+     * @param out Data output stream
+     */
     public void serialize(DataOutputStream out) throws IOException {
         out.writeUTF(this.id);
         out.writeUTF(this.origem);
@@ -101,6 +151,11 @@ public class Voo {
 
     }
 
+    /**
+     * Deserialize do voo.
+     * @param in Data input stream
+     * @return Voo voo.
+     */
     public static Voo deserialize(DataInputStream in) throws IOException {
         String id = in.readUTF();
         String origem = in.readUTF();
@@ -117,6 +172,10 @@ public class Voo {
         return new Voo(id, origem, destino, capacidade,lotacoes);
     }
 
+    /**
+     * Método toString do voo.
+     * @return voo em formato String.
+     */
     public String toString(){
         StringBuilder sb;
         sb = new StringBuilder();
@@ -129,6 +188,10 @@ public class Voo {
         return sb.toString();
     }
 
+    /**
+     * Método clone do voo.
+     * @return voo clonado.
+     */
     public Voo clone(){
         return new Voo(this);
     }
