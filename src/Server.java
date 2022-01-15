@@ -80,7 +80,7 @@ class VoosManager {
             String destino = pontos[pontos.length-1];
             for(int i = 0; i < pontos.length-1 && pontosValidos; i++){
                 String id = pontos[i]+pontos[i+1];
-                if(!(existsVoo(id) && haveLotacao(id,data)))
+                if(!(haveLotacao(id,data)))
                     pontosValidos = false;
                 else viagem.add(id);
             }
@@ -89,11 +89,6 @@ class VoosManager {
                     voos.get(id).addPassageiro(data);
                 }
                 reservasLock.writeLock().lock();
-                try{
-                    Thread.sleep(10000);
-                }catch (InterruptedException e){
-                    e.printStackTrace();
-                }
                 datasLock.readLock().unlock();
                 voosLock.writeLock().unlock();
                 this.lastidReserva++;
@@ -109,9 +104,26 @@ class VoosManager {
 
     private boolean haveLotacao(String id, LocalDate data) {
         try{
+            String voo = id;
             voosLock.readLock().lock();
-            Voo v = voos.get(id);
-            return v.getLotacao(data) < v.getCapacidade();
+            boolean existe = false;
+            boolean havelotacao = false;
+            if(voos.containsKey(voo)){
+                existe = true;
+            }
+            int i = 2;
+            while(existe && !havelotacao){
+                Voo v = voos.get(voo);
+                if(v.getLotacao(data) < v.getCapacidade()){
+                    havelotacao = true;
+                }
+                if(!havelotacao){
+                    voo = id + "#" +i;
+                    i++;
+                    existe = voos.containsKey(voo);
+                }
+            }
+            return havelotacao;
         }
         finally {
             voosLock.readLock().unlock();
@@ -181,38 +193,6 @@ class VoosManager {
         }
     }
 
-    public ArrayList<String> getReservasVoos(String nome){
-        ArrayList<String> listaReservas = new ArrayList<>();
-        StringBuilder sb;
-        reservasLock.readLock().lock();
-        Collection<Reserva> rs = reservas.values();
-        reservasLock.readLock().unlock();
-        for(Reserva r : rs){
-            if(r.getUtilizador().equals(nome)) {
-                int i = 0;
-                sb = new StringBuilder();
-                sb.append("#CodigoReserva ").append(r.getCodigo()).append(" Viagem: ");
-                voosLock.readLock().lock();
-                for (String idVoo : r.getViagem()) {
-                    Voo v = voos.get(idVoo);
-                    if (i == 0) {
-                        sb.append(v.getOrigem());
-                        sb.append("->");
-                        sb.append(v.getDestino());
-                    } else {
-                        sb.append("->");
-                        sb.append(v.getDestino());
-                    }
-                    i++;
-                }
-                voosLock.readLock().unlock();
-                listaReservas.add(sb.toString());
-            }
-        }
-
-        return listaReservas;
-    }
-
     public Utilizador getUtilizador(String nome) {
         try{
             userslock.readLock().lock();
@@ -224,48 +204,40 @@ class VoosManager {
     }
 
     public void registoUtilizadorCsv(Utilizador u) throws IOException {
-        fileLock[0].lock();
-        BufferedWriter bw = new BufferedWriter(new FileWriter(this.utilizadoresCsv,true));
-        bw.write(u.getNome()+";"+u.getPassword()+";");
-        if(u.isAdmin()) bw.write("1");
-        else bw.write("0");
-        bw.write("\n");
-        bw.close();
-        fileLock[0].unlock();
+        try{
+            fileLock[0].lock();
+            BufferedWriter bw = new BufferedWriter(new FileWriter(this.utilizadoresCsv,true));
+            bw.write(u.getNome()+";"+u.getPassword()+";");
+            if(u.isAdmin()) bw.write("1");
+            else bw.write("0");
+            bw.write("\n");
+            bw.close();
+        }
+        finally {
+            fileLock[0].unlock();
+        }
     }
 
     public void registoVooCsv(Voo v) throws IOException {
-        fileLock[1].lock();
-        BufferedWriter bw = new BufferedWriter(new FileWriter(this.voosCsv,true));
-        bw.write(v.getId()+";"+v.getOrigem()+";"+v.getDestino()+";"+v.getCapacidade()+"\n");
-        bw.close();
-        fileLock[1].unlock();
+        try{
+            fileLock[1].lock();
+            BufferedWriter bw = new BufferedWriter(new FileWriter(this.voosCsv,true));
+            bw.write(v.getId()+";"+v.getOrigem()+";"+v.getDestino()+";"+v.getCapacidade()+"\n");
+            bw.close();
+        }
+        finally {
+            fileLock[1].unlock();
+        }
     }
 
     public void registoReservaCsv(Reserva r) throws IOException {
-        fileLock[2].lock();
-        BufferedWriter bw = new BufferedWriter(new FileWriter(this.reservasCsv,true));
-        bw.write(r.getCodigo()+";"+r.getOrigem()+";"+r.getDestino()+";"+r.getUtilizador()+";"+r.getData()+";");
-        r.getViagem().forEach(k -> {
-            try {
-                bw.write(k+"-");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-        bw.write("\n");
-        bw.close();
-        fileLock[2].unlock();
-    }
-
-    public void registoTodasReservasCsv() throws IOException {
-        fileLock[2].lock();
-        BufferedWriter bw = new BufferedWriter(new FileWriter(this.reservasCsv,true));
-        for(Reserva r : reservas.values()) {
-            bw.write(r.getCodigo() +";"+r.getOrigem()+";"+r.getDestino()+ ";" + r.getUtilizador() + ";" + r.getData() + ";");
+        try{
+            fileLock[2].lock();
+            BufferedWriter bw = new BufferedWriter(new FileWriter(this.reservasCsv,true));
+            bw.write(r.getCodigo()+";"+r.getOrigem()+";"+r.getDestino()+";"+r.getUtilizador()+";"+r.getData()+";");
             r.getViagem().forEach(k -> {
                 try {
-                    bw.write(k + "-");
+                    bw.write(k+"-");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -273,26 +245,60 @@ class VoosManager {
             bw.write("\n");
             bw.close();
         }
-        fileLock[2].unlock();
+        finally {
+            fileLock[2].unlock();
+        }
+    }
+
+    public void registoTodasReservasCsv() throws IOException {
+        try{
+            fileLock[2].lock();
+            BufferedWriter bw = new BufferedWriter(new FileWriter(this.reservasCsv,true));
+            for(Reserva r : reservas.values()) {
+                bw.write(r.getCodigo() +";"+r.getOrigem()+";"+r.getDestino()+ ";" + r.getUtilizador() + ";" + r.getData() + ";");
+                r.getViagem().forEach(k -> {
+                    try {
+                        bw.write(k + "-");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+                bw.write("\n");
+            }
+            bw.close();
+        }
+        finally {
+
+            fileLock[2].unlock();
+        }
     }
 
     public void registoDataEncerrada(LocalDate data) throws IOException {
-        fileLock[3].lock();
-        BufferedWriter bw = new BufferedWriter(new FileWriter(this.datasEncerradasCsv,true));
-        bw.write(data.toString()+"\n");
-        bw.close();
-        fileLock[3].unlock();
+
+        try{
+            fileLock[3].lock();
+            BufferedWriter bw = new BufferedWriter(new FileWriter(this.datasEncerradasCsv,true));
+            bw.write(data.toString()+"\n");
+            bw.close();
+        }
+        finally {
+
+            fileLock[3].unlock();
+        }
     }
 
     public void registoTodasDatasEncerradasCsv() throws IOException {
-        fileLock[3].lock();
-        BufferedWriter bw = new BufferedWriter(new FileWriter(this.datasEncerradasCsv));
-        for(LocalDate data : datasEncerradas) {
-            bw.write(data.toString()+"\n");
-            bw.write("\n");
+        try {
+            fileLock[3].lock();
+            BufferedWriter bw = new BufferedWriter(new FileWriter(this.datasEncerradasCsv));
+            for (LocalDate data : datasEncerradas) {
+                bw.write(data.toString() + "\n");
+            }
             bw.close();
         }
-        fileLock[3].unlock();
+        finally {
+            fileLock[3].unlock();
+        }
     }
 
     public void loadUtilizadoresCsv() throws IOException {
@@ -445,25 +451,31 @@ class VoosManager {
     public boolean cancelaReserva(int codReserva) {
         boolean cancelada = false;
         reservasLock.writeLock().lock();
-        Reserva r = reservas.get(codReserva);
-        LocalDate data = r.getData();
-        datasLock.readLock().lock();
-        if(!datasEncerradas.contains(data)){
-            List<String> viagem = r.getViagem();
-            datasLock.readLock().unlock();
-            voosLock.writeLock().lock();
-            for(String id : viagem){
-                voos.get(id).removePassageiro(data);
+        if(reservas.containsKey(codReserva)) {
+            Reserva r = reservas.get(codReserva);
+            LocalDate data = r.getData();
+            datasLock.readLock().lock();
+            if (!datasEncerradas.contains(data)) {
+                List<String> viagem = r.getViagem();
+                datasLock.readLock().unlock();
+                voosLock.writeLock().lock();
+                for (String id : viagem) {
+                    voos.get(id).removePassageiro(data);
+                }
+                voosLock.writeLock().unlock();
+                reservas.remove(codReserva);
+                try {
+                    registoTodasReservasCsv();
+                } catch (IOException ignored) {
+                }
+                reservasLock.writeLock().unlock();
+                cancelada = true;
             }
-            voosLock.writeLock().unlock();
-            reservas.remove(codReserva);
-            try{
-                registoTodasReservasCsv();
-            }
-            catch(IOException ignored){}
-            reservasLock.writeLock().unlock();
-            cancelada = true;
+            else
+                datasLock.readLock().unlock();
         }
+        else
+            reservasLock.writeLock().unlock();
         return cancelada;
     }
 }
@@ -474,7 +486,6 @@ class Handler implements Runnable {
     private DataInputStream dis;
     private DataOutputStream dos;
     private Utilizador user = null;
-    private boolean logged = false;
     private int idC;
 
     public Handler (Socket socket, VoosManager manager, int idC){
@@ -582,7 +593,7 @@ class Handler implements Runnable {
 
     public void cancela() throws IOException {
         System.out.println("C"+idC+": processando cancelamento");
-        boolean cancelada = false;
+        boolean cancelada;
         int codReserva = dis.readInt();
         cancelada = manager.cancelaReserva(codReserva);
         System.out.println("C"+idC+": mandando ao cliente o booleano");
