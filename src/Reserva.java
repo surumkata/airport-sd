@@ -13,6 +13,15 @@ public class Reserva {
     private List<String> viagem; //lista de ids de voos
     private LocalDate data;
 
+    /**
+     * Construtor da Reserva.
+     * @param origem origem da reserva.
+     * @param destino destino da reserva.
+     * @param codigo codigo da reserva.
+     * @param viagem lista dos identificadores de voos que fazem a viagem.
+     * @param data data da reserva.
+     * @param utilizador nome do utilizador da reserva.
+     */
     public Reserva(String origem, String destino, int codigo, List<String> viagem, LocalDate data, String utilizador) {
         this.origem = origem;
         this.destino = destino;
@@ -22,22 +31,42 @@ public class Reserva {
         this.utilizador = utilizador;
     }
 
+    /**
+     * Get viagem.
+     * @return lista de identificadores de todos os voos que fazem a viagem.
+     */
     public List<String> getViagem(){
         return new ArrayList<>(this.viagem);
     }
 
+    /**
+     * Get Destino.
+     * @return destino da reserva.
+     */
     public String getDestino() {
         return destino;
     }
 
+    /**
+     * Get Origem.
+     * @return origem da reserva.
+     */
     public String getOrigem() {
         return origem;
     }
 
+    /**
+     * Get codigo.
+     * @return codigo da reserva.
+     */
     public int getCodigo() {
         return codigo;
     }
 
+    /**
+     * Get nome do utilizador.
+     * @return nome do utilizador da reserva.
+     */
     public String getUtilizador(){
         return utilizador;}
 
@@ -45,6 +74,10 @@ public class Reserva {
         return data;
     }
 
+    /**
+     * Serialize da reserva.
+     * @param out Data output stream.
+     */
     public void serialize(DataOutputStream out) throws IOException {
         out.writeUTF(this.origem);
         out.writeUTF(this.destino);
@@ -61,6 +94,11 @@ public class Reserva {
         out.writeUTF(this.data.toString());
     }
 
+    /**
+     * Deserialize da reserva.
+     * @param in Data input stream.
+     * @return Reserva reserva.
+     */
     public static Reserva deserialize(DataInputStream in) throws IOException {
         String origem = in.readUTF();
         String destino = in.readUTF();
@@ -75,6 +113,10 @@ public class Reserva {
         return new Reserva(origem,destino,codigo,viagem,data,utilizador);
     }
 
+    /**
+     * Método toString da reserva.
+     * @return Reserva sobre o formato String.
+     */
     public String toString(){
         StringBuilder sb;
         sb = new StringBuilder();
@@ -85,7 +127,11 @@ public class Reserva {
         sb.append("}");
         return sb.toString();
     }
-    
+
+    /**
+     * Método clone da reserva.
+     * @return clone da reserva.
+     */
     public Reserva clone(){
         return new Reserva(this.origem,this.destino,this.codigo,this.viagem,this.data,this.utilizador);
     }

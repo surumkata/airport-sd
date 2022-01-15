@@ -5,11 +5,21 @@ import java.util.ArrayList;
 
 class ReservasList extends ArrayList<Reserva> {
 
+    /**
+     * Serialize da lista de reservas.
+     * @param out Data output stream.
+     */
     public void serialize (DataOutputStream out) throws IOException {
         out.writeInt(this.size());
         for(Reserva r : this)
             r.serialize(out);
     }
+
+    /**
+     * Deserialize da lista de reservas.
+     * @param in Data input stream.
+     * @return lista de reservas.
+     */
     public static ReservasList deserialize (DataInputStream in) throws IOException {
         ReservasList cl = new ReservasList();
         int size = in.readInt();
@@ -19,6 +29,10 @@ class ReservasList extends ArrayList<Reserva> {
         return cl;
     }
 
+    /**
+     * Método toString da lista de reservas.
+     * @return lista de reservas no formato String.
+     */
     public String toString(){
         StringBuilder sb;
         sb = new StringBuilder();
