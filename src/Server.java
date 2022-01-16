@@ -18,7 +18,6 @@ class VoosManager {
     private ReadWriteLock userslock = new ReentrantReadWriteLock();//lock do map dos users
     private ReadWriteLock reservasLock = new ReentrantReadWriteLock();//lock do map das reservas
     private ReadWriteLock voosLock = new ReentrantReadWriteLock();//lock do map dos voos
-    private ReentrantLock [] fileLock = new ReentrantLock[4]; //lock dos ficheiros
     private String utilizadoresCsv; //[0] //nome do ficheiro dos users
     private String voosCsv; //[1] //nome do ficheiro dos voos
     private String reservasCsv; //[2] //nome do ficheiro das reservas
@@ -46,9 +45,6 @@ class VoosManager {
         this.lastidReserva = 0;
         this.datasEncerradas = new ArrayList<>();
         this.datasEncerradasCsv = datasEncerradasCsv;
-        for(int i = 0; i < 4; i++){
-            fileLock[i] = new ReentrantLock();
-        }
     }
 
     /**
@@ -61,6 +57,10 @@ class VoosManager {
         userslock.writeLock().lock();
         if(!users.containsKey(u.getNome())) {
             users.put(u.getNome(), u);
+            try{
+                registoUtilizadorCsv(u);
+            }
+            catch(IOException ignored){}
             added = true;
         }
         userslock.writeLock().unlock();
@@ -72,9 +72,9 @@ class VoosManager {
      * @param user nome do utilizador.
      * @param pontos lista de pontos por onde a viagem vai ocorrer.
      * @param datas lista de datas (escolhe a primeira válida).
-     * @return Reserva adicionado. null caso aja insucesso.
+     * @return codigo da reserva; -1 caso falhe.
      */
-    public Reserva createReserva(String user, String[] pontos, String[] datas){
+    public int createReserva(String user, String[] pontos, String[] datas){
         Reserva nova = null;
         LocalDate data = null;
         boolean dataValida = false;
@@ -113,11 +113,16 @@ class VoosManager {
                 int cod = lastidReserva;
                 nova = new Reserva(origem,destino,cod,viagem,data,user);
                 reservas.put(cod,nova);
+                try{
+                    registoReservaCsv(nova);
+                }
+                catch(IOException ignored){}
                 reservasLock.writeLock().unlock();
             }
         }
 
-        return nova;
+        if(nova!=null)return nova.getCodigo();
+        else return -1;
     }
 
     private boolean haveLotacao(String id, LocalDate data) {
@@ -151,9 +156,9 @@ class VoosManager {
     /**
      * Adiciona um voo ao manager.
      * @param v voo.
-     * @return Voo adicionado (id é mudado).
+     * @return true se foi adicionado com sucesso, false se não.
      */
-    public Voo updateVoos(Voo v){
+    public boolean updateVoos(Voo v){
         Voo novo = v.clone();
         String origemedestino = novo.getOrigem()+novo.getDestino();
         int i = 2;
@@ -165,8 +170,12 @@ class VoosManager {
         }
         novo.setId(id);
         voos.put(novo.getId(),novo);
+        try{
+            registoVooCsv(novo);
+        }
+        catch(IOException ignored){}
         voosLock.writeLock().unlock();
-        return novo;
+        return novo.getId()!=null;
     }
 
     /**
@@ -250,120 +259,65 @@ class VoosManager {
         }
     }
 
-    /**
-     * Regista um utilizador no CSV
-     * @param u utilizador a ser registada
-     */
-    public void registoUtilizadorCsv(Utilizador u) throws IOException {
-        try{
-            fileLock[0].lock();
-            BufferedWriter bw = new BufferedWriter(new FileWriter(this.utilizadoresCsv,true));
-            bw.write(u.getNome()+";"+u.getPassword()+";");
-            if(u.isAdmin()) bw.write("1");
-            else bw.write("0");
-            bw.write("\n");
-            bw.close();
-        }
-        finally {
-            fileLock[0].unlock();
-        }
+    private void registoUtilizadorCsv(Utilizador u) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.utilizadoresCsv,true));
+        bw.write(u.getNome()+";"+u.getPassword()+";");
+        if(u.isAdmin()) bw.write("1");
+        else bw.write("0");
+        bw.write("\n");
+        bw.close();
     }
 
-    /**
-     * Regista um voo no CSV
-     * @param v voo a ser registada
-     */
-    public void registoVooCsv(Voo v) throws IOException {
-        try{
-            fileLock[1].lock();
-            BufferedWriter bw = new BufferedWriter(new FileWriter(this.voosCsv,true));
-            bw.write(v.getId()+";"+v.getOrigem()+";"+v.getDestino()+";"+v.getCapacidade()+"\n");
-            bw.close();
-        }
-        finally {
-            fileLock[1].unlock();
-        }
+    private void registoVooCsv(Voo v) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.voosCsv,true));
+        bw.write(v.getId()+";"+v.getOrigem()+";"+v.getDestino()+";"+v.getCapacidade()+"\n");
+        bw.close();
     }
 
-    /**
-     * Regista um reserva no CSV
-     * @param r reserva a ser registada
-     */
-    public void registoReservaCsv(Reserva r) throws IOException {
-        try{
-            fileLock[2].lock();
-            BufferedWriter bw = new BufferedWriter(new FileWriter(this.reservasCsv,true));
-            bw.write(r.getCodigo()+";"+r.getOrigem()+";"+r.getDestino()+";"+r.getUtilizador()+";"+r.getData()+";");
+    private void registoReservaCsv(Reserva r) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.reservasCsv,true));
+        bw.write(r.getCodigo()+";"+r.getOrigem()+";"+r.getDestino()+";"+r.getUtilizador()+";"+r.getData()+";");
+        r.getViagem().forEach(k -> {
+            try {
+                bw.write(k+"-");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        bw.write("\n");
+        bw.close();
+    }
+
+
+    private void registoTodasReservasCsv() throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.reservasCsv,true));
+        for(Reserva r : reservas.values()) {
+            bw.write(r.getCodigo() +";"+r.getOrigem()+";"+r.getDestino()+ ";" + r.getUtilizador() + ";" + r.getData() + ";");
             r.getViagem().forEach(k -> {
                 try {
-                    bw.write(k+"-");
+                    bw.write(k + "-");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             });
             bw.write("\n");
-            bw.close();
         }
-        finally {
-            fileLock[2].unlock();
-        }
+        bw.close();
     }
 
 
-    private void registoTodasReservasCsv() throws IOException {
-        try{
-            fileLock[2].lock();
-            BufferedWriter bw = new BufferedWriter(new FileWriter(this.reservasCsv,true));
-            for(Reserva r : reservas.values()) {
-                bw.write(r.getCodigo() +";"+r.getOrigem()+";"+r.getDestino()+ ";" + r.getUtilizador() + ";" + r.getData() + ";");
-                r.getViagem().forEach(k -> {
-                    try {
-                        bw.write(k + "-");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                });
-                bw.write("\n");
-            }
-            bw.close();
-        }
-        finally {
-
-            fileLock[2].unlock();
-        }
-    }
-
-
-    /**
-     * Regista uma data no ficheiro CSV.
-     * @param data data a ser registada
-     */
-    public void registoDataEncerrada(LocalDate data) throws IOException {
-
-        try{
-            fileLock[3].lock();
-            BufferedWriter bw = new BufferedWriter(new FileWriter(this.datasEncerradasCsv,true));
-            bw.write(data.toString()+"\n");
-            bw.close();
-        }
-        finally {
-
-            fileLock[3].unlock();
-        }
+    private void registoDataEncerrada(LocalDate data) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.datasEncerradasCsv,true));
+        bw.write(data.toString()+"\n");
+        bw.close();
     }
 
     private void registoTodasDatasEncerradasCsv() throws IOException {
-        try {
-            fileLock[3].lock();
-            BufferedWriter bw = new BufferedWriter(new FileWriter(this.datasEncerradasCsv));
-            for (LocalDate data : datasEncerradas) {
-                bw.write(data.toString() + "\n");
-            }
-            bw.close();
+        BufferedWriter bw = new BufferedWriter(new FileWriter(this.datasEncerradasCsv));
+        for (LocalDate data : datasEncerradas) {
+            bw.write(data.toString() + "\n");
         }
-        finally {
-            fileLock[3].unlock();
-        }
+        bw.close();
     }
 
     private void loadUtilizadoresCsv() throws IOException {
@@ -548,13 +502,13 @@ class VoosManager {
                     for (String id : viagem) {
                         voos.get(id).removePassageiro(data);
                     }
-                    voosLock.writeLock().unlock();
                     reservas.remove(codReserva);
                     try {
                         registoTodasReservasCsv();
                     } catch (IOException ignored) {
                     }
                     cancelada = true;
+                    voosLock.writeLock().unlock();
                 }
                 else {
                     datasLock.readLock().unlock();
@@ -611,7 +565,6 @@ class Handler implements Runnable {
             Utilizador u = new Utilizador(nome, password, true);
             ret = manager.updateUtilizadores(u);
             if(ret) {
-                manager.registoUtilizadorCsv(u);
                 System.out.println("C"+idC+": registado admin com sucesso");
             }
         } else {
@@ -621,7 +574,6 @@ class Handler implements Runnable {
             Utilizador u = new Utilizador(nome, password, false);
             ret = manager.updateUtilizadores(u);
             if(ret) {
-                manager.registoUtilizadorCsv(u);
                 System.out.println("C"+idC+": registado utilizador com sucesso");
             }
         }
@@ -671,13 +623,12 @@ class Handler implements Runnable {
         System.out.println("C"+idC+": começando a reserva");
         String[] viagem = dis.readUTF().split(";");
         String[] datas = dis.readUTF().split(";");
-        Reserva nova = manager.createReserva(user.getNome(),viagem,datas);
-        if (nova != null) {
+        int codigo = manager.createReserva(user.getNome(),viagem,datas);
+        if (codigo != -1) {
             System.out.println("C"+idC+": reserva feita com sucesso");
-            manager.registoReservaCsv(nova);
             System.out.println("C"+idC+": mandando o booleano e o codigo");
             dos.writeBoolean(true);
-            dos.writeInt(nova.getCodigo());
+            dos.writeInt(codigo);
         }
         else dos.writeBoolean(false);
         System.out.println("C"+idC+": mandando o booleano");
@@ -712,10 +663,8 @@ class Handler implements Runnable {
         String origem = dis.readUTF();
         String destino = dis.readUTF();
         int cap = dis.readInt();
-        Voo novo = manager.updateVoos(new Voo(null,origem, destino, cap, new HashMap<>()));
-        if(novo.getId() != null) {
+        if(manager.updateVoos(new Voo(null,origem, destino, cap, new HashMap<>()))) {
             System.out.println("C"+idC+": voo adicionado com sucesso.");
-            manager.registoVooCsv(novo);
             adicionado = true;
         }
         System.out.println("C"+idC+": mandando o booleano");
