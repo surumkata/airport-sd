@@ -51,7 +51,7 @@ class VoosManager {
      * @param u utilizador a ser adicionado.
      * @return true se for bem adicionado, false caso contrário.
      */
-    public boolean updateUtilizadores(Utilizador u) {
+    public boolean updateUtilizador(Utilizador u) {
         boolean added = false;
         userslock.writeLock().lock();
         if(!users.containsKey(u.getNome())) {
@@ -152,7 +152,7 @@ class VoosManager {
      * @param v voo.
      * @return true se foi adicionado com sucesso, false se não.
      */
-    public boolean updateVoos(Voo v){
+    public boolean updateVoo(Voo v){
         Voo novo = v.clone();
         String origemedestino = novo.getOrigem()+novo.getDestino();
         int i = 2;
@@ -172,12 +172,7 @@ class VoosManager {
         return novo.getId()!=null;
     }
 
-    /**
-     * Verifica se um voo existe.
-     * @param id id do voo.
-     * @return true se voo existir, false caso contrário.
-     */
-    public boolean existsVoo(String id){
+    private boolean existsVoo(String id){
         try{
             voosLock.readLock().lock();
             return voos.containsKey(id);
@@ -187,12 +182,7 @@ class VoosManager {
         }
     }
 
-    /**
-     * Verifica se um utilizador existe.
-     * @param name nome do utilizador.
-     * @return true se utilizador existir, false caso contrário.
-     */
-    public boolean existeUtilizador(String name){
+    private boolean existeUtilizador(String name){
         try{
             userslock.readLock().lock();
             return this.users.containsKey(name);
@@ -491,8 +481,8 @@ class VoosManager {
                 LocalDate data = r.getData();
                 datasLock.readLock().lock();
                 if (!datasEncerradas.contains(data)) {
-                    List<String> viagem = r.getViagem();
                     datasLock.readLock().unlock();
+                    List<String> viagem = r.getViagem();
                     voosLock.writeLock().lock();
                     for (String id : viagem) {
                         voos.get(id).removePassageiro(data);
@@ -561,7 +551,7 @@ class Handler implements Runnable {
             String nome = dis.readUTF();
             String password = dis.readUTF();
             Utilizador u = new Utilizador(nome, password, true);
-            ret = manager.updateUtilizadores(u);
+            ret = manager.updateUtilizador(u);
             if(ret) {
                 System.out.println("C"+idC+": registado admin com sucesso");
             }
@@ -570,7 +560,7 @@ class Handler implements Runnable {
             String nome = dis.readUTF();
             String password = dis.readUTF();
             Utilizador u = new Utilizador(nome, password, false);
-            ret = manager.updateUtilizadores(u);
+            ret = manager.updateUtilizador(u);
             if(ret) {
                 System.out.println("C"+idC+": registado utilizador com sucesso");
             }
@@ -661,7 +651,7 @@ class Handler implements Runnable {
         String origem = dis.readUTF();
         String destino = dis.readUTF();
         int cap = dis.readInt();
-        if(manager.updateVoos(new Voo(null,origem, destino, cap, new HashMap<>()))) {
+        if(manager.updateVoo(new Voo(null,origem, destino, cap, new HashMap<>()))) {
             System.out.println("C"+idC+": voo adicionado com sucesso.");
             adicionado = true;
         }
