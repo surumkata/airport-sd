@@ -124,32 +124,27 @@ class VoosManager {
         else return -1;
     }
 
+    //não precisa de locks, uma vez que só é chamada na createReserva, que já faz lock.
     private boolean haveLotacao(String id, LocalDate data) {
-        try{
-            String voo = id;
-            voosLock.readLock().lock();
-            boolean existe = false;
-            boolean havelotacao = false;
-            if(voos.containsKey(voo)){
-                existe = true;
-            }
-            int i = 2;
-            while(existe && !havelotacao){
-                Voo v = voos.get(voo);
-                if(v.getLotacao(data) < v.getCapacidade()){
-                    havelotacao = true;
-                }
-                if(!havelotacao){
-                    voo = id + "#" +i;
-                    i++;
-                    existe = voos.containsKey(voo);
-                }
-            }
-            return havelotacao;
+        String voo = id;
+        boolean existe = false;
+        boolean havelotacao = false;
+        if(voos.containsKey(voo)){
+            existe = true;
         }
-        finally {
-            voosLock.readLock().unlock();
+        int i = 2;
+        while(existe && !havelotacao){
+            Voo v = voos.get(voo);
+            if(v.getLotacao(data) < v.getCapacidade()){
+                havelotacao = true;
+            }
+            if(!havelotacao){
+                voo = id + "#" +i;
+                i++;
+                existe = voos.containsKey(voo);
+            }
         }
+        return havelotacao;
     }
 
     /**
