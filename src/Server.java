@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 class VoosManager {
@@ -90,6 +89,7 @@ class VoosManager {
             }
             catch (DateTimeParseException ignored){}
         }
+        datasLock.readLock().unlock();
         boolean pontosValidos = true;
         List<String> viagem = new ArrayList<>();
         if(data != null){
@@ -107,7 +107,6 @@ class VoosManager {
                     voos.get(id).addPassageiro(data);
                 }
                 reservasLock.writeLock().lock();
-                datasLock.readLock().unlock();
                 voosLock.writeLock().unlock();
                 this.lastidReserva++;
                 int cod = lastidReserva;
@@ -489,9 +488,10 @@ class VoosManager {
      */
     public boolean cancelaReserva(int codReserva, String user) {
         boolean cancelada = false;
-        reservasLock.writeLock().lock();
+        reservasLock.readLock().lock();
         if(reservas.containsKey(codReserva)) {
             Reserva r = reservas.get(codReserva);
+            reservasLock.readLock().unlock();
             if(r.getUtilizador().equals(user)){
                 LocalDate data = r.getData();
                 datasLock.readLock().lock();
@@ -502,20 +502,23 @@ class VoosManager {
                     for (String id : viagem) {
                         voos.get(id).removePassageiro(data);
                     }
+                    reservasLock.writeLock().lock();
+                    voosLock.writeLock().unlock();
                     reservas.remove(codReserva);
+                    reservasLock.writeLock().unlock();
                     try {
                         registoTodasReservasCsv();
                     } catch (IOException ignored) {
                     }
                     cancelada = true;
-                    voosLock.writeLock().unlock();
                 }
                 else {
                     datasLock.readLock().unlock();
                 }
             }
         }
-        reservasLock.writeLock().unlock();
+        else
+            reservasLock.readLock().unlock();
         return cancelada;
     }
 }
